@@ -28,10 +28,10 @@ export default async function SignupPage() {
         <AuthIntro />
 
         <p className="mt-5 text-sm text-ink-muted">
-          Your name is how you sign in, and your PIN of 4 to 10 digits is the
-          only thing standing between your log and anyone who finds the URL —
-          so make it one you do not use elsewhere. Each account is separate;
-          nobody else here can see your weigh-ins or meals.
+          Your username is how you sign in, and your password is the only thing
+          standing between your log and anyone who finds the URL — so make it
+          one you do not use elsewhere. Each account is separate; nobody else
+          here can see your weigh-ins or meals.
         </p>
 
         <PinForm action={signupAction} mode="signup" />

@@ -23,6 +23,8 @@ export type SessionUser = {
   id: string;
   name: string;
   handle: string;
+  username: string | null;
+  setupComplete: boolean;
   goalWeightLbs: number | null;
   startWeightLbs: number | null;
   heightInches: number | null;
@@ -110,6 +112,8 @@ export const currentUser = cache(async function currentUser(): Promise<SessionUs
     id: user.id,
     name: user.name,
     handle: user.handle,
+    username: user.username,
+    setupComplete: user.setupComplete,
     goalWeightLbs: user.goalWeightLbs,
     startWeightLbs: user.startWeightLbs,
     heightInches: user.heightInches,

@@ -97,7 +97,7 @@ that were said or that were changed after feedback:
 | Runtime | React 19 | Server Components by default; `<ViewTransition>` available |
 | Database | Supabase Postgres via Prisma 7 | Driver adapters (`@prisma/adapter-pg`), `prisma.config.ts` |
 | Generated client | `src/generated/prisma` | **TypeScript, not JS** — cannot be `import`ed from a plain `.mjs` script |
-| Auth | One PIN per account, scrypt, HMAC-signed cookie | No accounts service for an app this size |
+| Auth | Username + password, scrypt, HMAC-signed cookie | No accounts service for an app this size. Accounts predating this still sign in with a PIN until `/setup` |
 | AI | Google Gemini (`@google/genai`, `gemini-2.5-flash`) | Meal calorie/macro estimation, behind one interface |
 | Charts | Recharts | One `ComposedChart`; see [Verifying work](#verifying-work) before replacing it |
 | Styling | Tailwind v4, `@theme inline` | Custom properties, **not** the shadcn `hsl(var(--x))` convention |
@@ -126,12 +126,15 @@ src/app/(app)/          everything behind the PIN
   calendar|meals|friends|settings/
 src/app/actions/        server actions, one module per area
 src/app/api/cron/       CRON_SECRET-guarded; exempt in proxy.ts
+src/app/setup/          the one-time username/password upgrade, outside (app)
 src/lib/                pure logic — dates, units, nutrition, calendar, friends
+src/lib/credentials.ts  username and password rules — no server-only, so forms
+                        can import them
 src/lib/ai/             estimator + the shared Gemini JSON call
 src/lib/session.ts      crypto-only helpers, safe to import from proxy.ts
 src/proxy.ts            optimistic auth gate + static-asset exemptions
 prisma/migrations/      incremental, never reset — production data lives here
-scripts/reset-pin.mjs   the only PIN recovery path
+scripts/reset-password.mjs  the only credential recovery path
 ```
 
 ## Data model
@@ -139,7 +142,8 @@ scripts/reset-pin.mjs   the only PIN recovery path
 Days are `"YYYY-MM-DD"` strings, never timestamps. Weights are always stored in
 **pounds**. Every row hangs off a `User`, and every query filters on `userId`.
 
-- **User** — name/handle, `pinHash`/`pinSalt`, goal and target figures, `units`,
+- **User** — name/handle/`username`, `setupComplete`, `pinHash`/`pinSalt`, goal
+  and target figures, `units`,
   `timezone`, `notifyWeighIn`/`notifyFriends`/`reminderHour`, `lastRemindedOn`,
   `milestoneLbs` (largest celebration already shown), `shareWeight`
 - **WeightEntry** — one per `(userId, date)`; re-submitting corrects it
@@ -408,6 +412,57 @@ the same query.
 **`notifyFriendActivity` never throws into its caller.** A push service being
 slow is not a reason for the friend request itself to fail.
 
+### Identity and credentials
+
+**The display name and the login key were already separate columns**, which is
+the only reason moving to usernames cost so little. `name` is what friends see;
+`handle` was what you typed. Adding `username` changed the second without
+touching the first, so nobody's card changed when their login did.
+
+**Nothing converts an account in advance — the account converts itself.** The
+2026-08-10 migration adds `username` and `setupComplete` and rewrites *no
+credentials*: every account keeps the PIN it had. An account with
+`setupComplete = false` signs in exactly as before, and is then sent to `/setup`
+once to choose a username and a password. The old secret stays valid right up to
+the moment its owner replaces it, which is what makes this incapable of locking
+anybody out — including someone who never comes back. The alternative, rewriting
+handles in the migration and mailing people their new names, has a failure mode
+where somebody simply cannot get in, and there is no email on file to fix it
+with.
+
+**The gate is in `(app)/layout.tsx`, not in the login action.** Sessions last 90
+days, so an account that has not signed in since before `/setup` existed is
+already inside the app and would never pass a login-time check. The layout is
+the one place every signed-in page goes through. `/setup` lives outside the
+`(app)` group for the same reason — inside it, it would redirect to itself.
+
+**Sign-in accepts a username or a legacy handle, and that is temporary.** The
+fallback exists only while accounts predating usernames survive. **It is also
+why `usernameProblem` is not the whole check**: `usernameTaken()` looks at
+`handle` as well, or Matthew could take the username `jerry` while Jerry's
+legacy handle is also `jerry`, and one typed word would name two accounts. Only
+single-word handles can collide — a username may not contain a space — which is
+exactly the set that query catches. **Once every account has a username, drop
+the handle fallback and this check gets simpler.**
+
+**Password rules are length and a blocklist, not composition.** NIST SP 800-63B
+stopped recommending mixed-case-and-a-symbol: those rules reliably produce
+`Password1!` and buy very little. `src/lib/credentials.ts` asks for 8
+characters, rejects a short list of the most common passwords, and rejects a
+password containing the username. Nothing is refused for lacking a symbol. The
+common-password list is 24 entries inline and carries a `ponytail:` note
+pointing at the haveibeenpwned range API for when this app takes people who did
+not get an invite.
+
+**The reserved-username list is a phishing control, not tidiness.** The social
+layer here is people sending each other short notes; an account called `helia`
+or `support` is a way to ask another tester for their password.
+
+**`pinHash`/`pinSalt` now hold a password.** The names are historical. Renaming
+a column here means dropping one, which takes production down until a manual
+deploy lands (see below) — not worth it for a name. The schema comment says so
+at the column.
+
 ### Security
 
 **Accounts are isolated at the query level.** Every read filters on `userId`,
@@ -419,9 +474,11 @@ and a redirect to `/login` would turn a failed cron into a silent 307.
 `/sw.js`, `/manifest.webmanifest`, `/icon-*`, `/apple-touch-icon*` are exempt
 too: the OS fetches them during install, outside any session.
 
-**No PIN recovery by design.** `scripts/reset-pin.mjs` is the escape hatch. It
-re-hashes with the same scrypt parameters as `src/lib/auth.ts`; the two must
-stay in step or a reset PIN will not verify.
+**No password recovery by design.** `scripts/reset-password.mjs` is the escape
+hatch. It re-hashes with the same scrypt parameters as `src/lib/auth.ts`, and
+carries a copy of the minimum length from `src/lib/credentials.ts`; all three
+must stay in step or a reset password will not verify, or will be one the form
+would have refused.
 
 ---
 
@@ -797,6 +854,21 @@ Duolingo, Apple Fitness), not yet implemented:
 
 **Needs the owner to act:**
 
+- **The username/password migration is applied but not deployed.**
+  `20260810200000_usernames_and_passwords` ran against production on
+  2026-08-10; all seven accounts are sitting at `setupComplete = false` with a
+  null username. This is deliberately invisible to the live Aug-6 build, which
+  knows none of those columns — but the moment the new code deploys, **every
+  tester lands on `/setup` at their next visit** and has to pick a username and
+  a password. Their existing PIN still gets them in. Tell them before deploying,
+  not after.
+- **Retire the legacy handle login once they are all through.** `loginAction`
+  falls back to `handle` lookup, and `usernameTaken()` has to check `handle` as
+  well to keep that unambiguous. Both simplify away when
+  `SELECT count(*) FROM "User" WHERE username IS NULL` reaches zero.
+- **Account deletion is required for the App Store.** Guideline 5.1.1(v): an
+  app that creates accounts must let people delete theirs from inside the app.
+  There is no such flow. Cheap now, a rejection later.
 - **Deploy.** As of 2026-08-10 production is still serving the Aug-6 build.
   `npx vercel deploy --prod` failed with *"Not authorized"* even though the same
   token reads fine (`whoami`, `project ls`, `project inspect` all work) and the

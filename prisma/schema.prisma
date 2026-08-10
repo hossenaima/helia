@@ -23,11 +23,29 @@ model User {
   /// Name as typed, used for display.
   name   String
   /// Lowercased `name`, used for lookup — so "Aima" and "aima" are one account.
+  ///
+  /// The *legacy* login key. Accounts made before usernames existed sign in
+  /// with this; everyone else signs in with `username`. It stays queryable
+  /// until every account has been through /setup, and can be retired then.
   handle String @unique
 
-  /// scrypt hash of this user's PIN.
+  /// The login identifier: lowercase, no spaces, chosen by the user. Null on
+  /// accounts that predate it, which is exactly the set /setup exists to fix.
+  username String? @unique
+
+  /// scrypt hash of whatever secret this account currently signs in with.
+  ///
+  /// The column names say "pin" because that is all this held until usernames
+  /// and passwords arrived, and renaming a column in this database means a
+  /// drop, which takes production down until a manual deploy lands. The name
+  /// is historical; the contents are a PIN before /setup and a password after.
   pinHash String
   pinSalt String
+
+  /// False only for accounts created before usernames and password rules. Such
+  /// an account still signs in with its old PIN and is then sent to /setup,
+  /// once, to choose both. Nothing else in the app reads this.
+  setupComplete Boolean @default(true)
 
   /// Canonical storage is always pounds; `units` only controls display.
   goalWeightLbs  Float?

@@ -27,6 +27,12 @@ export default async function AppLayout({
   // of every request from someone already signed in.
   if (!user) redirect((await hasAnyUser()) ? "/login" : "/signup");
 
+  // The one choke point for the username/password upgrade. Gating it here
+  // rather than at sign-in is what catches the 90-day sessions: an account
+  // that has not signed in since before /setup existed is already inside the
+  // app, and would never pass through a login-time check.
+  if (!user.setupComplete) redirect("/setup");
+
   // A cheer nobody notices is a cheer that did not happen, and Friends is the
   // one tab with something that arrives while you are elsewhere.
   const [requests, unread] = await Promise.all([

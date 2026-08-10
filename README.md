@@ -82,14 +82,17 @@ npm run dev                # http://localhost:3000
 The first visit sends you to `/signup` to create an account. Nothing is
 reachable before one exists.
 
-## Forgot a PIN
+## Forgot a password
 
-PINs are stored as scrypt hashes and there is no email recovery, so a forgotten
-PIN is reset directly by whoever has database access:
+Passwords are stored as scrypt hashes and there is no email recovery, so a
+forgotten one is reset directly by whoever has database access:
 
 ```bash
-node scripts/reset-pin.mjs "Your Name" 4821
+node scripts/reset-password.mjs your_username "a new password"
 ```
+
+It takes a username, or the name an account signed up with if it has not yet
+picked one.
 
 It writes to whichever database `DIRECT_URL` points at, so it fixes local and
 production together. Weigh-ins and meals are untouched.

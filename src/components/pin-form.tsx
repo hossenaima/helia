@@ -30,37 +30,52 @@ export function PinForm({
       {next && <input type="hidden" name="next" value={next} />}
       <input ref={tzRef} type="hidden" name="timezone" />
 
-      <div>
-        <label htmlFor="name" className="eyebrow block">
-          Name
-        </label>
-        <input
+      {isSignup && (
+        <TextField
           id="name"
           name="name"
-          type="text"
-          autoComplete="username"
-          autoCapitalize="none"
-          autoFocus
+          label="Display name"
+          hint="What friends see on your card. Spaces are fine here."
+          autoComplete="name"
+          autoCapitalize="words"
           maxLength={30}
-          className="
-            mt-2 w-full border-b-2 border-rule bg-transparent pb-1 text-2xl
-            focus:border-trace focus:outline-none
-          "
+          autoFocus
         />
-      </div>
+      )}
 
-      <PinField
-        id="pin"
-        name="pin"
-        label={isSignup ? "Choose a PIN" : "PIN"}
+      <TextField
+        id="name-or-username"
+        // Still `name`: sign-in accepts a username or the name an older
+        // account has always typed, and the action decides which it is.
+        name={isSignup ? "username" : "name"}
+        label="Username"
+        hint={
+          isSignup
+            ? "Lowercase letters, numbers and underscores. No spaces."
+            : // Accounts made before usernames existed still sign in with the
+              // name they always typed, and would otherwise read this label as
+              // asking for something they have never been given.
+              "Or the name you signed up with."
+        }
+        autoComplete="username"
+        autoCapitalize="none"
+        maxLength={isSignup ? 20 : 30}
+        autoFocus={!isSignup}
+      />
+
+      <SecretField
+        id="password"
+        name="password"
+        label={isSignup ? "Choose a password" : "Password"}
+        hint={isSignup ? "At least 8 characters." : undefined}
         autoComplete={isSignup ? "new-password" : "current-password"}
       />
 
       {isSignup && (
-        <PinField
+        <SecretField
           id="confirm"
           name="confirm"
-          label="Confirm PIN"
+          label="Confirm password"
           autoComplete="new-password"
         />
       )}
@@ -82,15 +97,59 @@ export function PinForm({
   );
 }
 
-function PinField({
+export function TextField({
   id,
   name,
   label,
+  hint,
+  ...input
+}: {
+  id: string;
+  name: string;
+  label: string;
+  hint?: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div>
+      <label htmlFor={id} className="eyebrow block">
+        {label}
+      </label>
+      <input
+        id={id}
+        name={name}
+        type="text"
+        aria-describedby={hint ? `${id}-hint` : undefined}
+        className="
+          mt-2 w-full border-b-2 border-rule bg-transparent pb-1 text-2xl
+          focus:border-trace focus:outline-none
+        "
+        {...input}
+      />
+      {hint && (
+        <p id={`${id}-hint`} className="mt-1.5 text-xs text-ink-muted">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A password field, not the old PIN field: no `inputMode="numeric"` and no
+ * `pattern="\d*"`, both of which would now stop people typing the letters the
+ * rules ask for — and on a phone the numeric keypad alone would have.
+ */
+export function SecretField({
+  id,
+  name,
+  label,
+  hint,
   autoComplete,
 }: {
   id: string;
   name: string;
   label: string;
+  hint?: string;
   autoComplete: string;
 }) {
   return (
@@ -102,14 +161,20 @@ function PinField({
         id={id}
         name={name}
         type="password"
-        inputMode="numeric"
-        pattern="\d*"
         autoComplete={autoComplete}
+        autoCapitalize="none"
+        maxLength={200}
+        aria-describedby={hint ? `${id}-hint` : undefined}
         className="
-          tnum mt-2 w-full border-b-2 border-rule bg-transparent pb-1 text-3xl
-          tracking-[0.3em] focus:border-trace focus:outline-none
+          mt-2 w-full border-b-2 border-rule bg-transparent pb-1 text-2xl
+          focus:border-trace focus:outline-none
         "
       />
+      {hint && (
+        <p id={`${id}-hint`} className="mt-1.5 text-xs text-ink-muted">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
