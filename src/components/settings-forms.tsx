@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import {
   changePasswordAction,
+  saveEmailAction,
   saveSettingsAction,
   type SettingsResult,
 } from "@/app/actions/settings";
@@ -117,6 +118,57 @@ export function GoalForm({
         className="btn btn-primary mt-6 w-full"
       >
         {pending ? "Saving" : "Save goal"}
+      </button>
+
+      <Status state={state} />
+    </form>
+  );
+}
+
+/**
+ * The announcement email.
+ *
+ * Its own small form rather than a field on the goal form: it saves to a
+ * different action, and burying an address people are asked to consent to
+ * inside a form about goal weight would be the wrong place to ask.
+ */
+export function EmailForm({ email }: { email: string | null }) {
+  const [state, formAction, pending] = useActionState(
+    saveEmailAction,
+    INITIAL,
+  );
+
+  return (
+    <form action={formAction} className="mt-4 rounded-xl border border-rule bg-surface p-5">
+      <label htmlFor="email" className="eyebrow block">
+        Email
+      </label>
+      <p className="mt-1 text-xs text-ink-muted">
+        Only for occasional notes about new features — never your weigh-ins or
+        meals. Clear the box to stop them.
+      </p>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        autoCapitalize="none"
+        maxLength={254}
+        defaultValue={email ?? ""}
+        placeholder="you@example.com"
+        className="
+          mt-2 w-full border-b border-rule bg-transparent pb-1 text-lg
+          placeholder:text-ink-faint focus:border-trace focus:outline-none
+        "
+      />
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn btn-quiet mt-6 w-full"
+      >
+        {pending ? "Saving" : "Save email"}
       </button>
 
       <Status state={state} />

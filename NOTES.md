@@ -135,6 +135,7 @@ src/lib/session.ts      crypto-only helpers, safe to import from proxy.ts
 src/proxy.ts            optimistic auth gate + static-asset exemptions
 prisma/migrations/      incremental, never reset — production data lives here
 scripts/reset-password.mjs  the only credential recovery path
+scripts/announce.mjs    push + email blast; dry run unless --send
 ```
 
 ## Data model
@@ -485,6 +486,36 @@ four-digit PIN. Every path that sets a credential now goes through
 a column here means dropping one, which takes production down until a manual
 deploy lands (see below) — not worth it for a name. The schema comment says so
 at the column.
+
+### Announcements
+
+**It is a script, not a page.** `node scripts/announce.mjs "Title" "Body"` goes
+out a handful of times a year from the same terminal that runs the deploy. An
+admin page would mean a send-to-everyone button on the public internet with its
+own owner check to get wrong, for something used less often than `vercel
+deploy`.
+
+**Dry run is the default.** `--send` is required to deliver. This is the only
+command in the repo that reaches people *outside* the database, and it cannot be
+recalled — so it prints the recipient list and stops.
+
+**Gmail SMTP, because there is no domain.** Resend and every peer will only send
+to arbitrary recipients once a sending domain is DNS-verified, and the project
+is on a `vercel.app` subdomain nobody here controls — so Resend could have
+emailed the account owner and nobody else. A Gmail app password sends to anyone,
+free, today, at a daily cap thousands of times what seven people need. **Revisit
+this if the app ever leaves the invited-friends stage**: Gmail's cap and
+reputation are not a mailing list.
+
+**No email column means no email.** Presence *is* the subscription — clearing
+the box in Settings is the unsubscribe. A second `notifyAnnouncements` flag
+beside it could only ever contradict it. Every announcement says why it arrived
+and how to stop, in both the text and HTML parts.
+
+**Addresses are self-entered, and that is the consent record.** Nothing in the
+app writes an address into somebody else's account. The two on file (2026-08-10)
+were seeded by hand for testing on the owner's instruction, which is a departure
+from that rule and worth knowing when reading the table.
 
 ### Security
 

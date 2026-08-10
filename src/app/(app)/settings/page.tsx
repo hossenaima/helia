@@ -4,7 +4,11 @@ import { currentUser } from "@/lib/auth";
 import { getEstimator } from "@/lib/ai/estimator";
 import { fromLbs } from "@/lib/units";
 import { PageTitle } from "@/components/page-title";
-import { GoalForm, PasswordChangeForm } from "@/components/settings-forms";
+import {
+  GoalForm,
+  PasswordChangeForm,
+  EmailForm,
+} from "@/components/settings-forms";
 import { DeleteAccount } from "@/components/delete-account";
 import { NotificationSettings } from "@/components/notification-settings";
 import { logoutAction } from "@/app/actions/auth";
@@ -60,6 +64,11 @@ export default async function SettingsPage() {
           reminderHour={user.reminderHour}
           deviceCount={deviceCount}
         />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="eyebrow">Announcements</h2>
+        <EmailForm email={user.email} />
       </section>
 
       <section className="mt-10">

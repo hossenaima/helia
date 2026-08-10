@@ -42,6 +42,15 @@ model User {
   pinHash String
   pinSalt String
 
+  /// Where announcements go. Null means no email on file — which is also how
+  /// somebody opts out, because clearing the box and unsubscribing are the same
+  /// intent and one column cannot disagree with itself the way a second flag
+  /// beside it could.
+  ///
+  /// Not unique: two people sharing an address is odd but not wrong, and a
+  /// unique index here would make one of them unable to save.
+  email String?
+
   /// False only for accounts created before usernames and password rules. Such
   /// an account still signs in with its old PIN and is then sent to /setup,
   /// once, to choose both. Nothing else in the app reads this.

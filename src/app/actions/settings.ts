@@ -78,6 +78,46 @@ export async function saveSettingsAction(
 }
 
 /**
+ * Save or clear the announcement email.
+ *
+ * An empty box saves null, and that is the unsubscribe — there is no separate
+ * "email me" switch, because clearing the address and opting out are the same
+ * intent, and two fields could contradict each other.
+ *
+ * Self-entered, in the account holder's own settings: that is the consent
+ * record. Nothing writes an address into somebody else's account.
+ */
+export async function saveEmailAction(
+  _prev: SettingsResult,
+  formData: FormData,
+): Promise<SettingsResult> {
+  const user = await requireUser();
+  const raw = String(formData.get("email") ?? "").trim();
+
+  if (raw === "") {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { email: null },
+    });
+    revalidatePath("/settings");
+    return { ok: true, message: "Email removed. No more announcements." };
+  }
+
+  const parsed = z.email().max(254).safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, error: "That does not look like an email address." };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    // Lowercased so the same address typed two ways is one address.
+    data: { email: parsed.data.toLowerCase() },
+  });
+  revalidatePath("/settings");
+  return { ok: true, message: "Saved. Announcements will go here." };
+}
+
+/**
  * Change the account password.
  *
  * The rules come from `credentials.ts`, the same module signup and /setup use.
