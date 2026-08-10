@@ -321,6 +321,19 @@ be a name with nothing to encourage.
 **`requestFriendAction` returns the same message whether or not the name
 exists**, so the form cannot be used to discover who has an account.
 
+**Removing a friend asks first, in a native `<dialog>`.** It is destructive,
+irreversible without a fresh invite, and sat one tap below the note box.
+`showModal()` puts it in the top layer — above every stacking context, so it
+cannot end up under the glass panels or the fixed tab bar the way a hand-rolled
+overlay would — and brings focus trapping, Escape-to-close and background
+inertness for nothing. Cancel is `<form method="dialog">`, which closes without
+submitting. This does not contradict "the celebration is not a modal": that one
+interrupts you to say well done, this one stops you deleting something.
+
+`.confirm` and `.confirm::backdrop` live in `@layer components`, like every
+component rule here — and the backdrop has to be named explicitly, because it
+is a top-layer pseudo-element that no descendant selector reaches.
+
 **A note is deleted 12 hours after it is *read*, not after it is sent.** An
 unread note waits indefinitely, so nothing can vanish before it has been seen.
 The page filters expired ones so the moment is exact; the cron deletes them so
@@ -596,25 +609,28 @@ near-white page there is nothing to refract.
 
 ### Icons
 
-**Every icon is generated — `node scripts/make-icons.mjs`.** One vector
-definition produces `icon-512`, `icon-192`, `apple-touch-icon`, `badge-96` and
-`icon.svg`. Edit the script, never the PNGs.
+The mark is **one descending stroke** in `--trace` on `--ground`. The PNGs are
+the source of truth — there is no vector original.
 
-- The mark is a **sun above a descending trace**. Helia means sun, the app is a
-  morning ritual, and the line is what it is about, so the three ideas are one
-  drawing.
-- **The rays are load-bearing.** A plain disc above a line reads as a head over
-  a pair of shoulders — four attempts did, at every size. Rays are what make it
-  a sun rather than a face. Don't "simplify" them away.
 - An S-curve was tried first; at home-screen size two inflections read as a
   squiggle. One descent survives the scale.
+- A **sun above the trace** was tried on 2026-08-10 and rejected by the owner
+  as ugly, and the original was restored byte-for-byte. It is in the history at
+  `a512526` if the idea ever comes back. Worth knowing if it does: a plain disc
+  above a line reads as a head over a pair of shoulders at every size, and rays
+  were the only thing that fixed it.
 - `apple-touch-icon.png` is 180×180, **opaque and un-rounded**. iOS composites
   transparency onto black and applies its own mask, so pre-rounded corners
   double-round.
-- The mark stays inside 23–77% of the canvas to survive Android's maskable crop,
-  and uses the literal `--ground` and `--trace` tokens. **The check includes
-  stroke width and ray length**, because round caps overshoot their endpoint by
-  half a stroke; the script throws rather than emit something Android will clip.
+- The mark stays inside 23–77% of the canvas to survive Android's maskable crop.
+
+**`badge-96.png` is generated — `node scripts/make-icons.mjs`. Re-run it after
+changing the icon.** A notification badge is an alpha mask: Android keeps the
+shape and discards the colour, so pointing `badge` at the full-colour icon put
+a grey blob in the status bar. The silhouette is *measured off* `icon-512.png`
+rather than drawn again, so the two cannot drift; alpha comes from how dark each
+pixel is, which keeps the antialiased edges instead of thresholding them into
+jaggies.
 
 ---
 

@@ -462,3 +462,36 @@ body {
     animation-delay: 0s !important;
   }
 }
+
+/*
+ * The confirmation dialog.
+ *
+ * `showModal()` puts a <dialog> in the top layer, which is above every
+ * stacking context on the page — so unlike a hand-rolled overlay it cannot be
+ * trapped under the glass panels or the fixed tab bar, and it brings focus
+ * trapping, Escape-to-close and background inertness with it.
+ *
+ * Layered, like every other component rule here: an unlayered block would beat
+ * any Tailwind utility placed on the element, whatever the specificity.
+ */
+@layer components {
+  .confirm {
+    margin: auto;
+    width: min(22rem, calc(100vw - 2.5rem));
+    padding: 1.25rem;
+    border: 0;
+    border-radius: 1.25rem;
+    background: var(--surface);
+    color: var(--ink);
+    /* Heavier than --lift on purpose: this one is meant to sit above the page
+       rather than on it. Not a token, because nothing else needs it. */
+    box-shadow: 0 24px 60px rgb(20 26 30 / 0.22);
+  }
+
+  /* The backdrop is a top-layer pseudo-element and is not a descendant of
+     anything, so no global rule reaches it — it has to be named. */
+  .confirm::backdrop {
+    background: rgb(24 29 32 / 0.42);
+    backdrop-filter: blur(2px);
+  }
+}

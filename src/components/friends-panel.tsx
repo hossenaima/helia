@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import {
   requestFriendAction,
   respondToRequestAction,
@@ -150,6 +150,7 @@ function FriendCard({
   // server is the record rather than the render.
   const [shareFood, setShareFood] = useState(friend.iShareMeals);
   const [, startSharing] = useTransition();
+  const removeRef = useRef<HTMLDialogElement>(null);
 
   // Emptying the box is the receipt. Leaving the text sitting there reads as
   // "nothing happened", and the obvious response to that is to press Send
@@ -323,15 +324,42 @@ function FriendCard({
         />
       </div>
 
-      <form action={removeFriendAction} className="mt-3">
-        <input type="hidden" name="otherId" value={friend.id} />
-        <button
-          type="submit"
-          className="eyebrow transition-colors hover:!text-up"
-        >
-          Remove friend
-        </button>
-      </form>
+      {/* Removing is destructive and one tap away from the note box, so it asks
+          first. A native <dialog> — showModal() brings the top layer, focus
+          trapping, Escape and inertness with it, none of which is worth
+          reimplementing. */}
+      <button
+        type="button"
+        onClick={() => removeRef.current?.showModal()}
+        className="eyebrow mt-3 transition-colors hover:!text-up"
+      >
+        Remove friend
+      </button>
+
+      <dialog ref={removeRef} className="confirm" aria-labelledby={`rm-${friend.id}`}>
+        <p id={`rm-${friend.id}`} className="font-bold">
+          Remove {friend.name}?
+        </p>
+        <p className="mt-2 text-sm text-ink-muted">
+          You will stop seeing each other&rsquo;s weigh-ins and food, and what
+          you had chosen to share with them is forgotten. Either of you can send
+          a new invite later.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          {/* method="dialog" closes without submitting anything. */}
+          <form method="dialog" className="contents">
+            <button type="submit" className="btn btn-quiet !py-2">
+              Cancel
+            </button>
+          </form>
+          <form action={removeFriendAction} className="contents">
+            <input type="hidden" name="otherId" value={friend.id} />
+            <button type="submit" className="btn btn-primary !rounded-full !py-2">
+              Remove
+            </button>
+          </form>
+        </div>
+      </dialog>
     </li>
   );
 }
