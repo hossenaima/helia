@@ -231,6 +231,12 @@ item carries the estimator's working and is editable. Correcting one scales its
 macros by the same ratio and flips it to `exact` — once a person has adjusted
 it, it is their number.
 
+**A logged day on the calendar shows its reading, not a dot.** Asked for by a
+tester, and it makes the month a coarse chart you can read at a glance. The date
+shrinks to a faint label when there is a number to show — the number is the
+reason to look. Today is marked with a ring rather than the old bottom dot,
+which the reading would have sat on top of.
+
 **Apple Health parsing happens in the browser.** The zip is ~10MB but
 `export.xml` inflates past 200MB, far beyond a serverless request body. Only the
 extracted readings cross the network.

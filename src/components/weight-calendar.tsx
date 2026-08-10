@@ -97,10 +97,13 @@ export function WeightCalendar({
         {weeks.flat().map((day, i) => {
           if (!day) return <span key={`pad-${i}`} />;
 
-          const logged = byDate.has(day);
+          const entry = byDate.get(day);
+          const logged = entry !== undefined;
           const isToday = day === today;
           const isSelected = day === selected;
           const future = day > today;
+          const reading =
+            entry === undefined ? null : round1(fromLbs(entry, units)).toFixed(1);
 
           return (
             <button
@@ -108,11 +111,13 @@ export function WeightCalendar({
               type="button"
               disabled={future}
               onClick={() => pick(day)}
-              aria-label={`${formatDayLong(day)}${logged ? ", logged" : ", not logged"}`}
+              aria-label={`${formatDayLong(day)}${reading ? `, ${reading} ${units}` : ", not logged"}`}
               aria-pressed={isSelected}
               className={`
-                relative aspect-square rounded-xl text-sm font-semibold
+                relative flex aspect-square flex-col items-center justify-center
+                rounded-xl leading-none font-semibold
                 transition-colors disabled:opacity-20
+                ${isToday && !isSelected ? "ring-2 ring-ink/25" : ""}
                 ${
                   isSelected
                     ? "bg-ink text-ground"
@@ -122,12 +127,22 @@ export function WeightCalendar({
                 }
               `}
             >
-              {Number(day.slice(8))}
-              {isToday && !isSelected && (
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 bottom-1.5 mx-auto size-1 rounded-full bg-trace"
-                />
+              {/* With a reading to show, the date steps back and becomes the
+                  label — the number is what the day is now worth looking at
+                  for. Empty days keep the date at full size. */}
+              <span
+                className={
+                  reading
+                    ? `text-[0.6rem] font-bold ${isSelected ? "opacity-70" : "text-ink-faint"}`
+                    : "text-sm"
+                }
+              >
+                {Number(day.slice(8))}
+              </span>
+              {reading && (
+                <span className="tnum mt-0.5 text-[0.68rem] font-bold">
+                  {reading}
+                </span>
               )}
             </button>
           );
