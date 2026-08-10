@@ -54,9 +54,10 @@ if (preview) {
   const out = preview.includes("=")
     ? preview.slice(preview.indexOf("=") + 1)
     : "email-preview.html";
-  writeFileSync(out, renderHtml(title, body));
+  // A sample name, so the preview shows the greeting that recipients see.
+  writeFileSync(out, renderHtml(title, body, "Sam Rivera"));
   console.log(`\nwrote ${out} — open it in a browser. Nothing was sent.\n`);
-  console.log(renderText(title, body));
+  console.log(renderText(title, body, "Sam Rivera"));
   process.exit(0);
 }
 
@@ -166,8 +167,9 @@ if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
         subject: renderSubject(title),
         // Both parts, because a text-only mail is likelier to be filtered and
         // an HTML-only one is unreadable wherever HTML is off.
-        text: renderText(title, body),
-        html: renderHtml(title, body),
+        // Rendered per recipient, so the greeting is theirs.
+        text: renderText(title, body, person.name),
+        html: renderHtml(title, body, person.name),
       });
       mailSent++;
     } catch (error) {

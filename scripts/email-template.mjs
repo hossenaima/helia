@@ -72,6 +72,15 @@ export function renderSubject(title) {
   return `Helia update: ${title}`;
 }
 
+/**
+ * First word of the display name. "Aima Hossen" greets as "Aima"; a one-word
+ * name like "fatboy" is left as it is. Blank falls back to no greeting rather
+ * than "Hi ," — a broken greeting is worse than none.
+ */
+export function firstName(name) {
+  return String(name ?? "").trim().split(/\s+/)[0] ?? "";
+}
+
 export function escapeHtml(s) {
   return String(s).replace(
     /[&<>"']/g,
@@ -132,12 +141,15 @@ function blocks(body) {
     .join("");
 }
 
-export function renderText(title, body) {
+export function renderText(title, body, name) {
+  const who = firstName(name);
   // The plain-text part gets the same content, including the feedback ask —
   // a reader whose client shows text only is exactly the reader most likely to
   // have something to report about it.
   return (
-    `${title}\n\n${body}\n\n` +
+    `${title}\n\n` +
+    (who ? `Hi ${who},\n\n` : "") +
+    `${body}\n\n` +
     `Open Helia: ${SITE}\n\n` +
     `---\n` +
     `Something missing, or something broken? Reply to this email and tell me\n` +
@@ -148,7 +160,14 @@ export function renderText(title, body) {
   );
 }
 
-export function renderHtml(title, body) {
+export function renderHtml(title, body, name) {
+  const who = firstName(name);
+  // Sits after the rule rather than above the eyebrow: the eyebrow and headline
+  // are what the eye lands on first, and a greeting above them pushes the
+  // subject of the email below the fold on a phone.
+  const greeting = who
+    ? `<p style="${P}">Hi ${escapeHtml(who)},</p>`
+    : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -212,7 +231,7 @@ export function renderHtml(title, body) {
               <tr><td style="width:36px;height:2px;background:${TRACE};font-size:0;line-height:0">&nbsp;</td></tr>
             </table>
 
-            ${blocks(body)}
+            ${greeting}${blocks(body)}
 
             <!-- Bulletproof button: padding on the <a> inside a table cell, so
                  the whole box is clickable even where the cell background is
