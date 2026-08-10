@@ -526,6 +526,51 @@ has no edge at all and reads as a stray squiggle. "Helia" underneath is what
 makes the pair a logo. The image carries `alt=""` precisely because the word is
 already there — with images blocked, one name is right and two is a stutter.
 
+### The weekly digest
+
+**Charts in an email are tables.** Gmail strips `<svg>` outright, canvas and
+script are gone everywhere, and a generated PNG would need hosting *and* arrive
+as an empty box wherever remote images are blocked — which is the default. Cells
+with background colours render in every client, need no assets, and survive
+image blocking because they are not an image.
+
+**The weight columns are scaled to the week's own spread, not to zero**, or a
+2 lb move on a 180 lb person draws seven identical bars. Same rule as the app's
+chart. A truncated baseline is only honest when disclosed, so the range is
+printed above the chart and every column carries its reading.
+
+**A macro bar's width tracks the calorie figure printed beside it.** These were
+two different quantities at first: width came from `protein·4 + carbs·4 + fat·9`
+while the number came from the items' calories. Plenty of items carry calories
+and no macros — a hand-typed meal has none — so the *biggest* day of the week
+drew the *shortest* bar. Whatever the macros do not account for is now neutral
+grey labelled "not recorded", which states the gap instead of hiding it by
+shrinking the day.
+
+**Attendance leads, the trend follows, the raw change sits below both.** Opening
+the Weight tab is a choice; an inbox is not. Leading an unprompted email with
+"+2.3 lb" on a bad week is how a digest becomes the thing that makes somebody
+stop reading it. The trend is there for the reason MacroFactor puts it first —
+it does not flinch on a bad morning.
+
+**Nobody is mailed an empty week.** A digest with nothing in it is a nag, and
+the person it reaches is the one most likely to unsubscribe. Skipped weeks still
+set `lastDigestOn`, or the sweep retries them for an hour.
+
+**`notifyDigest` is separate from having an `email`, and defaults false.**
+Agreeing to hear about new features is not agreeing to weekly statistics about
+your own body, so the migration deliberately does not backfill one from the
+other.
+
+**It rides the reminders workflow**, on the same hourly tick, for the same
+reason that one is hourly: "Monday at 8am" is a different instant per timezone.
+`lastDigestOn` holds the week already sent, which is what makes an at-least-once
+scheduler safe.
+
+**`?preview=<username>` renders one digest as HTML and sends nothing** — still
+behind `CRON_SECRET`, because it is somebody's weight data. It is how the two
+chart bugs above were found, on real rows rather than invented ones.
+
 **A body block whose every line starts with `-` becomes a bulleted list**, and
 anything else stays a paragraph — so an announcement can open with a sentence
 and then list what changed. The bullets are a two-column table, not a `<ul>`:

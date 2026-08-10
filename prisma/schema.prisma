@@ -51,6 +51,18 @@ model User {
   /// unique index here would make one of them unable to save.
   email String?
 
+  /// Whether to send the Monday digest. Separate from having an `email`, and
+  /// **defaults false**, because wanting to hear about new features is not the
+  /// same as wanting weekly statistics about your own body — defaulting it on
+  /// would opt people into the second by way of the first. Same rule as the
+  /// sharing flags: a new channel starts off.
+  notifyDigest Boolean @default(false)
+
+  /// Week key ("YYYY-MM-DD" of the Monday) of the last digest actually sent.
+  /// The weekly sweep is at-least-once like the reminder one, so this is what
+  /// stops a retry becoming a second email.
+  lastDigestOn String?
+
   /// False only for accounts created before usernames and password rules. Such
   /// an account still signs in with its old PIN and is then sent to /setup,
   /// once, to choose both. Nothing else in the app reads this.

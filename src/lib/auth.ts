@@ -25,6 +25,7 @@ export type SessionUser = {
   handle: string;
   username: string | null;
   email: string | null;
+  notifyDigest: boolean;
   setupComplete: boolean;
   goalWeightLbs: number | null;
   startWeightLbs: number | null;
@@ -115,6 +116,7 @@ export const currentUser = cache(async function currentUser(): Promise<SessionUs
     handle: user.handle,
     username: user.username,
     email: user.email,
+    notifyDigest: user.notifyDigest,
     setupComplete: user.setupComplete,
     goalWeightLbs: user.goalWeightLbs,
     startWeightLbs: user.startWeightLbs,

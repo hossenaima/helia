@@ -8,6 +8,7 @@ import {
   GoalForm,
   PasswordChangeForm,
   EmailForm,
+  DigestForm,
 } from "@/components/settings-forms";
 import { DeleteAccount } from "@/components/delete-account";
 import { NotificationSettings } from "@/components/notification-settings";
@@ -69,6 +70,7 @@ export default async function SettingsPage() {
       <section className="mt-10">
         <h2 className="eyebrow">Announcements</h2>
         <EmailForm email={user.email} />
+        <DigestForm enabled={user.notifyDigest} hasEmail={user.email !== null} />
       </section>
 
       <section className="mt-10">

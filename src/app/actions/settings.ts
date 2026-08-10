@@ -118,6 +118,35 @@ export async function saveEmailAction(
 }
 
 /**
+ * Turn the Monday digest on or off.
+ *
+ * Separate from having an address on file: hearing about new features and
+ * receiving weekly statistics about your own body are different things to
+ * agree to, and this one starts off for everybody.
+ */
+export async function setDigestAction(
+  _prev: SettingsResult,
+  formData: FormData,
+): Promise<SettingsResult> {
+  const user = await requireUser();
+  const on = formData.get("notifyDigest") === "1";
+
+  if (on && !user.email) {
+    return { ok: false, error: "Add an email address first." };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { notifyDigest: on },
+  });
+  revalidatePath("/settings");
+  return {
+    ok: true,
+    message: on ? "Digest on. It arrives Monday." : "Digest off.",
+  };
+}
+
+/**
  * Change the account password.
  *
  * The rules come from `credentials.ts`, the same module signup and /setup use.

@@ -20,3 +20,17 @@ jobs:
         env:
           APP_URL: ${{ secrets.APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+      # Same hourly tick rather than a second workflow: "Monday morning" is a
+      # different instant in every timezone, so this needs exactly the sweep
+      # the reminders already have. The route sends only to accounts for whom
+      # it is currently Monday at their chosen hour, and `lastDigestOn` makes a
+      # repeat call a no-op.
+      - name: Call the weekly digest sweep
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/digest"
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import {
   changePasswordAction,
   saveEmailAction,
+  setDigestAction,
   saveSettingsAction,
   type SettingsResult,
 } from "@/app/actions/settings";
@@ -133,10 +134,7 @@ export function GoalForm({
  * inside a form about goal weight would be the wrong place to ask.
  */
 export function EmailForm({ email }: { email: string | null }) {
-  const [state, formAction, pending] = useActionState(
-    saveEmailAction,
-    INITIAL,
-  );
+  const [state, formAction, pending] = useActionState(saveEmailAction, INITIAL);
 
   return (
     <form action={formAction} className="mt-4 rounded-xl border border-rule bg-surface p-5">
@@ -171,6 +169,45 @@ export function EmailForm({ email }: { email: string | null }) {
         {pending ? "Saving" : "Save email"}
       </button>
 
+      <Status state={state} />
+    </form>
+  );
+}
+
+/**
+ * The Monday digest switch.
+ *
+ * Its own form because it is a different consent from the address above it —
+ * and it is disabled without one, since there would be nowhere to send it.
+ */
+export function DigestForm({
+  enabled,
+  hasEmail,
+}: {
+  enabled: boolean;
+  hasEmail: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(setDigestAction, INITIAL);
+
+  return (
+    <form action={formAction} className="mt-3 rounded-xl border border-rule bg-surface p-5">
+      <input type="hidden" name="notifyDigest" value={enabled ? "0" : "1"} />
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-bold">Weekly digest</p>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            A Monday summary of your week — the days you logged, your trend, and
+            what you ate. {hasEmail ? "" : "Add an email above to turn it on."}
+          </p>
+        </div>
+        <button
+          type="submit"
+          disabled={pending || (!hasEmail && !enabled)}
+          className={`btn shrink-0 !py-2 ${enabled ? "btn-quiet" : "btn-primary"}`}
+        >
+          {pending ? "…" : enabled ? "Turn off" : "Turn on"}
+        </button>
+      </div>
       <Status state={state} />
     </form>
   );
