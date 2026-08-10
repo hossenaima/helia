@@ -17,11 +17,26 @@ import { formatDelta, fromLbs, type Units } from "@/lib/units";
 
 const INITIAL: FriendResult = { ok: false };
 
-const QUICK = [
-  "Nice work today 👏",
-  "Proud of you",
-  "Keep the streak going 🔥",
-];
+/**
+ * The quick notes follow the friend's last move, because the same sentence is
+ * congratulation on one morning and salt in the wound on another. A tester
+ * asked for this: "Nice work today" went because nobody talks like that, and
+ * offering it to someone whose weight went up made it worse.
+ *
+ * This does not contradict "a friend's gain is not scored" — nothing here
+ * renders the direction or judges it. It only decides which three sentences
+ * are on hand, and the box stays free text either way.
+ */
+const QUICK_DOWN = ["Proud of you", "Look at you go", "Keep it up 🔥"];
+const QUICK_UP = ["Life has its ups and downs", "Keep going", "You've got this"];
+/** No shared weight, or no earlier reading to compare against — say something
+ *  that is true whichever way the morning went. */
+const QUICK_STEADY = ["Proud of you", "Keep going", "Keep the streak going 🔥"];
+
+function quickNotes(changeLbs: number | null): string[] {
+  if (changeLbs === null || changeLbs === 0) return QUICK_STEADY;
+  return changeLbs < 0 ? QUICK_DOWN : QUICK_UP;
+}
 
 export function FriendsPanel({
   friends,
@@ -267,7 +282,7 @@ function FriendCard({
       <form action={sendAction} className="mt-3">
         <input type="hidden" name="toId" value={friend.id} />
         <div className="flex flex-wrap gap-2">
-          {QUICK.map((q) => (
+          {quickNotes(friend.changeLbs).map((q) => (
             <button
               key={q}
               type="button"

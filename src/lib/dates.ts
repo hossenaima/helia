@@ -94,6 +94,16 @@ export function formatDayLong(day: string): string {
   }).format(dayKeyToDate(day));
 }
 
+/** "8:14 AM" in a given zone. The day is already stated wherever this is used,
+ *  so repeating it would only crowd the line. */
+export function formatTimeIn(value: Date | string, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: isValidTimezone(timeZone) ? timeZone : DEFAULT_TIMEZONE,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 /** "Aug 6, 8:14 AM" in a given zone — a note needs the hour, not just the day. */
 export function formatMomentIn(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat("en-US", {

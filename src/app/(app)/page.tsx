@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
-import { todayIn, formatDayShort } from "@/lib/dates";
+import { todayIn, formatDayShort, formatTimeIn, dayKeyIn } from "@/lib/dates";
 import { formatDelta, fromLbs, formatWeight, type Units } from "@/lib/units";
 import { PageTitle } from "@/components/page-title";
 import { UnitSwitch } from "@/components/unit-switch";
@@ -144,11 +144,14 @@ export default async function WeightPage() {
               percent={progress}
               value={fromLbs(latest.weightLbs, units).toFixed(1)}
               unit={units}
-              caption={
+              caption={[
                 latest.date === today
                   ? "today"
-                  : formatDayShort(latest.date).toLowerCase()
-              }
+                  : formatDayShort(latest.date).toLowerCase(),
+                loggedTime(latest, user.timezone),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             />
             <div className="min-w-0 flex-1">
               {progress !== null && (
@@ -239,6 +242,7 @@ export default async function WeightPage() {
               .map((entry, i, list) => {
                 const prior = list[i + 1];
                 const delta = prior ? entry.weightLbs - prior.weightLbs : null;
+                const time = loggedTime(entry, user.timezone);
 
                 return (
                   <li
@@ -248,9 +252,12 @@ export default async function WeightPage() {
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm">{formatDayShort(entry.date)}</p>
-                      {entry.note && (
+                      {/* Time and note share the sub-line. On the day label
+                          "Mon, Aug 10 · 11:44 AM" wraps at 390px and doubles
+                          the row height, which is most of this list. */}
+                      {(time || entry.note) && (
                         <p className="truncate text-xs text-ink-muted">
-                          {entry.note}
+                          {[time, entry.note].filter(Boolean).join(" · ")}
                         </p>
                       )}
                     </div>
@@ -285,6 +292,28 @@ export default async function WeightPage() {
       )}
     </>
   );
+}
+
+/**
+ * The clock time a weigh-in was recorded, or null when that time would not
+ * mean what it says.
+ *
+ * `createdAt` is when the row appeared, which is only the time somebody
+ * *weighed* if they logged it on the day it is for. A calendar backfill or an
+ * Apple Health import writes rows for past days at the moment of the import,
+ * so rendering that as "7:42 AM" would state a morning that never happened.
+ * When the two days disagree, the entry gets no time rather than a wrong one.
+ *
+ * `createdAt`, not `updatedAt`: correcting a typo at 7:05 does not move the
+ * weigh-in, and the first write is the one that tracks it.
+ */
+function loggedTime(
+  entry: { date: string; createdAt: Date },
+  timezone: string,
+): string | null {
+  return dayKeyIn(entry.createdAt, timezone) === entry.date
+    ? formatTimeIn(entry.createdAt, timezone)
+    : null;
 }
 
 function StatTile({

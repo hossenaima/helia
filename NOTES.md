@@ -28,7 +28,6 @@ would otherwise rediscover the hard way, add it — see
 - [Third-party research already done](#third-party-research-already-done)
 - [Tried and rejected](#tried-and-rejected)
 - [Open items](#open-items)
-- [Decisions waiting on the owner](#decisions-waiting-on-the-owner)
 - [Keeping this document alive](#keeping-this-document-alive)
 
 ---
@@ -44,7 +43,8 @@ small celebrations when a milestone or a calorie target is met.
 - Five tabs: **Weight** (`/`), **Calendar**, **Meals**, **Friends**, **Settings**
 
 **State of play, 2026-08-10.** Seven accounts, five of them testers. `main` is
-pushed. Working: weigh-ins with a trend chart and lb/kg switch, the calendar —
+pushed. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
+logged, the calendar —
 which now shows each day's reading — and Apple Health import, meals with Gemini
 estimation and one-tap reuse of a past meal, friends with account-wide weight
 sharing and **per-friend** food sharing, a week chart behind each friend card,
@@ -85,6 +85,9 @@ that were said or that were changed after feedback:
   and what it asks daily. Arriving at "Locked" and a PIN box told them nothing.
 - **Ship and look at it.** Work is reviewed in the browser on a phone-sized
   viewport, not in the diff. Screenshots land better than descriptions.
+- **Canned words have to sound like a person.** A tester asked for "Nice work
+  today 👏" to go — "no one really says that" — and for the quick notes to
+  answer which way the friend's weight went. Both were done on 2026-08-10.
 
 ## Stack
 
@@ -162,6 +165,20 @@ travel.
 **The timezone is per account, not per server.** `APP_TIMEZONE` survives only
 as a fallback — it was wrong the moment a second person joined from another
 zone.
+
+**A weigh-in shows the time it was logged — but only when it was logged on its
+own day.** The day key says nothing about the hour, and `createdAt` is when the
+*row* appeared, not when anybody stood on a scale. For a calendar backfill or an
+Apple Health import those are different things: the rows are written at the
+moment of the import, so rendering that clock reading against a three-week-old
+day would state a morning that never happened. `loggedTime()` in `(app)/page.tsx`
+compares `dayKeyIn(createdAt, tz)` against the entry's date and returns null when
+they disagree — no time at all beats a wrong one. It reads `createdAt` rather
+than `updatedAt` because correcting a typo at 7:05 does not move the weigh-in.
+
+**The time is on the sub-line of a log row, not beside the date.** "Mon, Aug 10 ·
+11:44 AM" wraps at 390px and doubles the height of every row in the list. It
+shares that line with the note, which was already rendered there.
 
 **It is synced on every page load, not at sign-in.** Sign-in-only sounded
 sufficient and was not: sessions last 90 days, so an account created before the
@@ -307,6 +324,22 @@ configuring a `<LineChart>` would have been. Its y-range is the *week's* spread,
 deliberately unlike the main chart's rule — this one answers "how has their week
 gone", where the main one answers "where am I against my goal", so a quiet week
 should still show shape rather than flatten.
+
+**The quick notes follow the friend's last move.** Three canned sentences sat
+above the note box regardless of what had happened to the person reading them,
+and the same words are congratulation on one morning and salt in the wound on
+the next. A loss offers congratulation, a gain offers encouragement ("Life has
+its ups and downs", "Keep going"), and a friend whose weight you cannot see — or
+who has no earlier reading to compare against — gets the sentences that are true
+either way. The box stays free text in every case; this only decides what is on
+hand.
+
+This does not contradict the rule below. Nothing renders the direction or
+scores it — `quickNotes()` reads `changeLbs` and never shows it.
+
+**"Nice work today 👏" is gone because nobody talks like that.** A tester said
+so directly. Canned encouragement fails in the direction of sounding canned, so
+the replacements are shorter and plainer.
 
 **A friend's gain is not scored.** The delta renders in `--down` for a loss and
 inherits the muted text otherwise. Rust `--up` and an ↑ told someone off for
@@ -780,8 +813,8 @@ Duolingo, Apple Fitness), not yet implemented:
   the deploy, because `npm run build` runs `migrate deploy` while the old build
   is still serving and would re-open the same outage for the length of the
   build.
-- **Rotate the Gemini API key.** It was pasted in plaintext during the build.
-  (The Supabase password and region were explicitly left alone on request.)
+- **One lost message.** "Nice work today 👏", sent 5:39am ET Aug 6, direction
+  unknown. Will be restored once the owner says who sent it.
 
 **Known and deliberate:**
 
@@ -803,19 +836,6 @@ Duolingo, Apple Fitness), not yet implemented:
 rust arrow on a friend's gain, and the week strip spending `--trace` — were
 fixed on 2026-08-10. The reasoning moved into Load-bearing decisions and the
 Design system.)*
-
-## Decisions waiting on the owner
-
-- **Liquid glass.** It was explicitly requested, and it is also the loudest
-  thing left in an app whose brief is "cleaner". Removing it would be a large
-  quieting and a net deletion of CSS. Owner's call.
-- **The 🔥 emoji** in the streak — the most saturated pixels in a monochrome
-  palette. Also explicitly requested.
-- **The sign-in shader backdrop.** Dropping it removes `three`,
-  `@react-three/fiber`, `camera-controls`, `three-stdlib` and
-  `@shadergradient/react` in one go.
-- **One lost message.** "Nice work today 👏", sent 5:39am ET Aug 6, direction
-  unknown. Will be restored once the owner says who sent it.
 
 ---
 
