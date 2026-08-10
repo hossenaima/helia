@@ -26,6 +26,13 @@ import nodemailer from "nodemailer";
 
 const [, , title, body, ...flags] = process.argv;
 const send = flags.includes("--send");
+/**
+ * `--only=you@example.com` restricts the send to one address and skips push
+ * entirely. It exists so the first delivery of a new template lands in your own
+ * inbox — reading the real thing is the only way to catch a broken link or a
+ * subject line that reads badly, and a dry run cannot show you that.
+ */
+const only = flags.find((f) => f.startsWith("--only="))?.slice("--only=".length);
 
 if (!title || !body) {
   console.error('usage: node scripts/announce.mjs "Title" "Body" [--send]');
@@ -50,15 +57,29 @@ const db = new pg.Client({
 });
 await db.connect();
 
-const { rows: mailTo } = await db.query(
+const { rows: allMail } = await db.query(
   `SELECT name, email FROM "User" WHERE email IS NOT NULL ORDER BY name`,
 );
-const { rows: pushTo } = await db.query(
+const { rows: allPush } = await db.query(
   `SELECT s.id, s.endpoint, s.p256dh, s.auth, u.name
      FROM "PushSubscription" s
      JOIN "User" u ON u.id = s."userId"
     ORDER BY u.name`,
 );
+
+const mailTo = only
+  ? allMail.filter((m) => m.email === only.toLowerCase())
+  : allMail;
+const pushTo = only ? [] : allPush;
+
+if (only) {
+  console.log(`\n--only=${only} — one address, no push`);
+  if (mailTo.length === 0) {
+    console.error(`\nNo account has the email ${only}. Nothing to send.`);
+    await db.end();
+    process.exit(1);
+  }
+}
 
 console.log(`\n  ${title}\n  ${body}\n`);
 console.log(`push devices : ${pushTo.length}`);
