@@ -24,7 +24,7 @@ import { writeFileSync } from "node:fs";
 import pg from "pg";
 import webpush from "web-push";
 import nodemailer from "nodemailer";
-import { renderHtml, renderText } from "./email-template.mjs";
+import { renderHtml, renderSubject, renderText } from "./email-template.mjs";
 
 const [, , title, body, ...flags] = process.argv;
 const send = flags.includes("--send");
@@ -163,7 +163,7 @@ if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       await mailer.sendMail({
         from: `Helia <${process.env.GMAIL_USER}>`,
         to: person.email,
-        subject: title,
+        subject: renderSubject(title),
         // Both parts, because a text-only mail is likelier to be filtered and
         // an HTML-only one is unreadable wherever HTML is off.
         text: renderText(title, body),

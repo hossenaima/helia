@@ -53,6 +53,25 @@ const SITE = "https://helia-plum.vercel.app";
 const FEEDBACK =
   process.env.FEEDBACK_EMAIL || process.env.GMAIL_USER || "vthecookie@gmail.com";
 
+/**
+ * The subject line: who it is from, then what it is about.
+ *
+ * "Helia update:" carries the sender, because in a crowded inbox the first
+ * question is whose mail this is — the From name is easy to miss on a phone,
+ * where Gmail shows the subject at nearly full weight and the sender small.
+ *
+ * **Email only.** The push notification keeps the bare title: a push already
+ * shows which app it came from, so prefixing it there would spend the one line
+ * a locked phone displays on a word the reader can already see. Same reason
+ * "Friend request" was dropped from those titles.
+ *
+ * Keep the title short — Gmail truncates a subject around 70 characters on
+ * desktop and closer to 35 on a phone, and this prefix spends 14 of them.
+ */
+export function renderSubject(title) {
+  return `Helia update: ${title}`;
+}
+
 export function escapeHtml(s) {
   return String(s).replace(
     /[&<>"']/g,
@@ -139,7 +158,7 @@ export function renderHtml(title, body) {
      so they tone down automatic inversion instead of recolouring everything. -->
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>${escapeHtml(title)}</title>
+<title>${escapeHtml(renderSubject(title))}</title>
 </head>
 <body style="margin:0;padding:0;background:${GROUND};font-family:${FONT};-webkit-text-size-adjust:100%">
 
