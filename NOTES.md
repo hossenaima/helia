@@ -540,6 +540,12 @@ feature that used it. This happened on 2026-08-10 with `User.shareMeals`. Deploy
 the code that stops reading the column first, then drop it; or accept the gap
 knowingly and keep it short.
 
+That same column is the worked example of doing it right the second time.
+`20260810210000_drop_orphan_share_meals` ran only once production was serving
+code that had never heard of it, and all five signed-in tabs were then loaded
+against the live site to confirm — the check that matters is a *signed-in* page,
+because that is the one `currentUser()` is on the path of.
+
 **Regenerate and restart after a schema change.** `npx prisma generate` writes
 to `src/generated/prisma`, and a running dev server keeps the old client in
 memory. Turbopack HMR has also been seen serving a stale route module after an
@@ -907,16 +913,6 @@ Duolingo, Apple Fitness), not yet implemented:
   project id in `.vercel/project.json` matches the real project under
   `vthecookie-6604's projects`. Try `npx vercel login` first. Everything from
   2026-08-10 is committed and pushed but **not live**.
-- **`User.shareMeals` is an orphan column.** It was dropped by
-  `20260810120000_per_friend_meal_sharing`, which broke the still-live Aug-6
-  build — see the warning in
-  [Working on this database safely](#working-on-this-database-safely) — so it
-  was added straight back by hand to end the outage. Every value is `false`,
-  which is exactly what it held before. Nothing reads it. **Once the deploy
-  lands, drop it in a follow-up migration**; do not add that migration before
-  the deploy, because `npm run build` runs `migrate deploy` while the old build
-  is still serving and would re-open the same outage for the length of the
-  build.
 - **One lost message.** "Nice work today 👏", sent 5:39am ET Aug 6, direction
   unknown. Will be restored once the owner says who sent it.
 
