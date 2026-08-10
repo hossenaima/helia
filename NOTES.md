@@ -526,6 +526,23 @@ has no edge at all and reads as a stray squiggle. "Helia" underneath is what
 makes the pair a logo. The image carries `alt=""` precisely because the word is
 already there — with images blocked, one name is right and two is a stutter.
 
+**A body block whose every line starts with `-` becomes a bulleted list**, and
+anything else stays a paragraph — so an announcement can open with a sentence
+and then list what changed. The bullets are a two-column table, not a `<ul>`:
+list indentation is among the least consistent things across mail clients, and
+Outlook applies Word's own list formatting regardless of what you ask for. A row
+per item puts the hanging indent exactly where it is drawn.
+
+**There is no feedback textbox in the email, because there cannot be.** Gmail
+and Outlook strip `<form>` and its inputs outright, and an input field in a
+message is a phishing signal to spam filters — a textbox there would render as
+dead decoration or get the mail binned. The working equivalent is a `mailto:`
+button, which opens the reader's own mail app already addressed with a subject
+filled in. Plain Reply reaches the same inbox anyway, since these send *from*
+that account, so the copy names both routes. **If a real textbox is ever wanted,
+it belongs on a page in the app**, where a form actually posts — linked from the
+email rather than embedded in it.
+
 **Addresses are self-entered, and that is the consent record.** Nothing in the
 app writes an address into somebody else's account. The two on file (2026-08-10)
 were seeded by hand for testing on the owner's instruction, which is a departure

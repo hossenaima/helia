@@ -45,6 +45,14 @@ const FONT =
 
 const SITE = "https://helia-plum.vercel.app";
 
+/**
+ * Where "tell me what's broken" goes. Defaults to the sending account, which is
+ * also what a plain Reply reaches — so the two routes land in the same inbox
+ * whichever one someone takes.
+ */
+const FEEDBACK =
+  process.env.FEEDBACK_EMAIL || process.env.GMAIL_USER || "vthecookie@gmail.com";
+
 export function escapeHtml(s) {
   return String(s).replace(
     /[&<>"']/g,
@@ -53,29 +61,69 @@ export function escapeHtml(s) {
   );
 }
 
-/** Blank-line-separated paragraphs, so a multi-paragraph body stays readable. */
-function paragraphs(body) {
+// font-family is repeated on every text element on purpose. Clients do not
+// reliably inherit it through table cells, and one element that misses it falls
+// back to the client default — which is a serif, so a single omission reads as
+// two different emails stapled together.
+const P = `margin:0 0 16px;font-family:${FONT};font-size:16px;line-height:1.65;color:${INK_MUTED}`;
+
+/**
+ * A bulleted block, drawn as a two-column table rather than a `<ul>`.
+ *
+ * List indentation and bullet position are among the least consistent things
+ * across mail clients — Outlook applies its own Word list formatting and
+ * ignores most of what you ask for. A row per item with the glyph in its own
+ * fixed cell puts the wrap exactly where it is drawn here, everywhere.
+ *
+ * The glyph is neutral ink, not `--trace`: in this app the trace means weight,
+ * and spending it on decoration is what the design notes warn against.
+ */
+function bullets(items) {
+  const rows = items
+    .map(
+      (item) =>
+        `<tr>` +
+        `<td valign="top" style="width:18px;padding:0 0 10px;font-family:${FONT};font-size:16px;line-height:1.65;color:${INK_FAINT}">&bull;</td>` +
+        `<td valign="top" style="padding:0 0 10px;font-family:${FONT};font-size:16px;line-height:1.65;color:${INK_MUTED}">${escapeHtml(item)}</td>` +
+        `</tr>`,
+    )
+    .join("");
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 8px">${rows}</table>`;
+}
+
+/**
+ * Blank-line-separated blocks. A block whose every line starts with `-` becomes
+ * a bulleted list; anything else stays a paragraph — so a body can open with a
+ * sentence and then list what changed.
+ */
+function blocks(body) {
   return body
     .split(/\n\s*\n/)
-    .map((p) => p.trim())
+    .map((b) => b.trim())
     .filter(Boolean)
-    .map(
-      (p) =>
-        // font-family repeated on every text element on purpose. Clients do not
-        // reliably inherit it through table cells, and one element that misses
-        // it falls back to the client default — which is a serif, so a single
-        // omission reads as two different emails stapled together.
-        `<p style="margin:0 0 16px;font-family:${FONT};font-size:16px;line-height:1.65;color:${INK_MUTED}">` +
-        `${escapeHtml(p).replace(/\n/g, "<br>")}</p>`,
-    )
+    .map((block) => {
+      const lines = block
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+      const isList = lines.every((l) => /^[-*•]\s+/.test(l));
+      if (isList) return bullets(lines.map((l) => l.replace(/^[-*•]\s+/, "")));
+      return `<p style="${P}">${escapeHtml(block).replace(/\n/g, "<br>")}</p>`;
+    })
     .join("");
 }
 
 export function renderText(title, body) {
+  // The plain-text part gets the same content, including the feedback ask —
+  // a reader whose client shows text only is exactly the reader most likely to
+  // have something to report about it.
   return (
     `${title}\n\n${body}\n\n` +
     `Open Helia: ${SITE}\n\n` +
-    `—\n` +
+    `---\n` +
+    `Something missing, or something broken? Reply to this email and tell me\n` +
+    `what you want Helia to do — or write to ${FEEDBACK}.\n\n` +
+    `---\n` +
     `You are getting this because you added your email in Helia's settings.\n` +
     `Clear it there to stop: ${SITE}/settings\n`
   );
@@ -145,7 +193,7 @@ export function renderHtml(title, body) {
               <tr><td style="width:36px;height:2px;background:${TRACE};font-size:0;line-height:0">&nbsp;</td></tr>
             </table>
 
-            ${paragraphs(body)}
+            ${blocks(body)}
 
             <!-- Bulletproof button: padding on the <a> inside a table cell, so
                  the whole box is clickable even where the cell background is
@@ -161,6 +209,43 @@ export function renderHtml(title, body) {
               </tr>
             </table>
 
+          </td>
+        </tr>
+
+        <!-- Ask for feedback.
+             This is where a textbox would go, and a textbox cannot go here:
+             Gmail and Outlook strip <form> and its inputs outright, and an
+             input field in a message is a phishing signal to spam filters. A
+             mailto: link is the thing that works in every client — it opens
+             their own mail app already addressed, with a subject filled in.
+             Replying works too, since these are sent from that same account,
+             so the sentence names both routes. -->
+        <tr>
+          <td style="padding:16px 0 0">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="background:${SURFACE};border:1px solid ${RULE};border-radius:20px">
+              <tr>
+                <td style="padding:26px 32px">
+                  <p style="margin:0 0 6px;font-family:${FONT};font-size:15px;font-weight:700;color:${INK}">
+                    Something missing, or something broken?
+                  </p>
+                  <p style="margin:0 0 18px;font-family:${FONT};font-size:15px;line-height:1.6;color:${INK_MUTED}">
+                    Tell me what you want Helia to do and I will build it. Reply
+                    to this email, or use the button &mdash; both reach me.
+                  </p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td align="center" style="border:1px solid ${INK};border-radius:999px">
+                        <a href="mailto:${FEEDBACK}?subject=Helia%20feedback&body=What%20I%20would%20change%3A%0A%0A"
+                           style="display:inline-block;padding:11px 22px;font-family:${FONT};font-size:14px;font-weight:700;color:${INK};text-decoration:none;border-radius:999px">
+                          Send feedback
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
 
