@@ -20,3 +20,7 @@ Three things from it that are easy to get wrong and expensive to get wrong:
   against `next start`, and check the database directly. See *Verifying work*.
 - **Deploys are manual.** `npx vercel deploy --prod` — the project is not
   Git-connected, so pushing does nothing.
+- **A user-facing change gets a line in [`UNANNOUNCED.md`](./UNANNOUNCED.md)**,
+  in the same commit that ships it. That file is what the next announcement
+  email is written from; a change that never gets a line is a change the
+  testers find by accident.

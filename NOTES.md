@@ -136,6 +136,7 @@ src/proxy.ts            optimistic auth gate + static-asset exemptions
 prisma/migrations/      incremental, never reset — production data lives here
 scripts/reset-password.mjs  the only credential recovery path
 scripts/announce.mjs    push + email blast; dry run unless --send
+UNANNOUNCED.md          user-facing changes not yet emailed to testers
 ```
 
 ## Data model
@@ -602,6 +603,14 @@ that account, so the copy names both routes. **If a real textbox is ever wanted,
 it belongs on a page in the app**, where a form actually posts — linked from the
 email rather than embedded in it.
 
+**`UNANNOUNCED.md` is what the next announcement is written from.** A
+user-facing change gets a line there in the commit that ships it, and the lines
+move into its *Already announced* section once an email goes out. Written from
+memory at announcement time instead, the list is whatever the last few days
+happened to leave behind — the earlier changes are exactly the ones testers then
+find by accident. Anything invisible from the app (a refactor, a fix nobody hit)
+belongs in this file instead, not in front of a tester.
+
 **Addresses are self-entered, and that is the consent record.** Nothing in the
 app writes an address into somebody else's account. The two on file (2026-08-10)
 were seeded by hand for testing on the owner's instruction, which is a departure
@@ -1067,6 +1076,9 @@ the hard way. Specifically:
 
 1. **A decision that cost something to reach** → *Load-bearing decisions*, with
    the reason, not just the rule. A rule without its reason gets reverted.
+1. **A change a user can see** → a line in `UNANNOUNCED.md`, in the same commit.
+   That is a different list from this one: this file is why the code is the way
+   it is, that file is what has not been said out loud yet.
 2. **A dead end** → *Tried and rejected*, so nobody spends the afternoon again.
 3. **A surprise from a library, browser or platform** → *Gotchas*.
 4. **A mistake with consequences** → wherever it will be read *before* the same

@@ -183,5 +183,15 @@ console.log(
   `\nsent: ${pushSent} push${dead.length ? ` (${dead.length} dead endpoints pruned)` : ""}, ${mailSent} email\n`,
 );
 
+// The list only stays true if it is emptied when its contents go out. Printed
+// at the one moment that is certainly true, rather than trusting anyone to
+// remember afterwards.
+if (!only && mailSent + pushSent > 0) {
+  console.log(
+    "Now move what you just announced into the 'Already announced' section\n" +
+      "of UNANNOUNCED.md, with today's date.\n",
+  );
+}
+
 await db.end();
 
