@@ -512,6 +512,20 @@ the box in Settings is the unsubscribe. A second `notifyAnnouncements` flag
 beside it could only ever contradict it. Every announcement says why it arrived
 and how to stop, in both the text and HTML parts.
 
+**The template is a separate module so it can be looked at.** `--preview` writes
+the rendered HTML to a file and touches neither the database nor the network. An
+email you have only ever read as source is one you have not seen — the first
+render came out with the body in **serif**, because `font-family` was set on the
+headline and not on the paragraphs, and clients do not reliably inherit it
+through a table cell. Every text element now names the font. Check a preview at
+390px as well as 600: these are read on a phone.
+
+**The mark needs the wordmark next to it.** `icon-192.png` is the descending
+stroke drawn *on* `--ground` with no alpha, so against the email's background it
+has no edge at all and reads as a stray squiggle. "Helia" underneath is what
+makes the pair a logo. The image carries `alt=""` precisely because the word is
+already there — with images blocked, one name is right and two is a stutter.
+
 **Addresses are self-entered, and that is the consent record.** Nothing in the
 app writes an address into somebody else's account. The two on file (2026-08-10)
 were seeded by hand for testing on the owner's instruction, which is a departure

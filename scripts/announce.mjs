@@ -20,9 +20,11 @@
  * normal thing to do.
  */
 import "dotenv/config";
+import { writeFileSync } from "node:fs";
 import pg from "pg";
 import webpush from "web-push";
 import nodemailer from "nodemailer";
+import { renderHtml, renderText } from "./email-template.mjs";
 
 const [, , title, body, ...flags] = process.argv;
 const send = flags.includes("--send");
@@ -43,6 +45,19 @@ if (title.length > 80) {
   // a body that ended up in the wrong argument.
   console.error("Title is over 80 characters — did the body land in $1?");
   process.exit(1);
+}
+
+// `--preview` writes the rendered email to a file and exits, touching neither
+// the database nor the network. It is how the template gets looked at.
+const preview = flags.find((f) => f.startsWith("--preview"));
+if (preview) {
+  const out = preview.includes("=")
+    ? preview.slice(preview.indexOf("=") + 1)
+    : "email-preview.html";
+  writeFileSync(out, renderHtml(title, body));
+  console.log(`\nwrote ${out} — open it in a browser. Nothing was sent.\n`);
+  console.log(renderText(title, body));
+  process.exit(0);
 }
 
 const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
@@ -151,11 +166,8 @@ if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
         subject: title,
         // Both parts, because a text-only mail is likelier to be filtered and
         // an HTML-only one is unreadable wherever HTML is off.
-        text: `${body}\n\n—\nhttps://helia-plum.vercel.app\n\nYou are getting this because you added your email in Helia's settings. Clear it there to stop.`,
-        html:
-          `<p style="margin:0 0 1em">${escapeHtml(body)}</p>` +
-          `<p style="margin:0 0 2em"><a href="https://helia-plum.vercel.app">Open Helia</a></p>` +
-          `<p style="color:#5a656b;font-size:12px;margin:0">You are getting this because you added your email in Helia&rsquo;s settings. Clear it there to stop.</p>`,
+        text: renderText(title, body),
+        html: renderHtml(title, body),
       });
       mailSent++;
     } catch (error) {
@@ -171,10 +183,3 @@ console.log(
 
 await db.end();
 
-function escapeHtml(s) {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
-  );
-}
