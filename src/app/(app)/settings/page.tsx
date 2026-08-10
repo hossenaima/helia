@@ -4,7 +4,8 @@ import { currentUser } from "@/lib/auth";
 import { getEstimator } from "@/lib/ai/estimator";
 import { fromLbs } from "@/lib/units";
 import { PageTitle } from "@/components/page-title";
-import { GoalForm, PinChangeForm } from "@/components/settings-forms";
+import { GoalForm, PasswordChangeForm } from "@/components/settings-forms";
+import { DeleteAccount } from "@/components/delete-account";
 import { NotificationSettings } from "@/components/notification-settings";
 import { logoutAction } from "@/app/actions/auth";
 import { prisma } from "@/lib/db";
@@ -62,8 +63,8 @@ export default async function SettingsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="eyebrow">PIN</h2>
-        <PinChangeForm />
+        <h2 className="eyebrow">Password</h2>
+        <PasswordChangeForm />
       </section>
 
       <section className="mt-10">
@@ -72,7 +73,9 @@ export default async function SettingsPage() {
           <div className="min-w-0">
             <p className="text-sm font-bold">Signed in as {user.name}</p>
             <p className="mt-0.5 text-xs text-ink-muted">
-              You will need your PIN to get back in.
+              {user.username
+                ? `You sign in as ${user.username}.`
+                : "You will need your password to get back in."}
             </p>
           </div>
           <form action={logoutAction}>
@@ -81,6 +84,7 @@ export default async function SettingsPage() {
             </button>
           </form>
         </div>
+        <DeleteAccount name={user.name} />
       </section>
 
       <section className="mt-10">

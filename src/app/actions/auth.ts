@@ -202,3 +202,41 @@ export async function logoutAction() {
   await endSession();
   redirect("/login");
 }
+
+/**
+ * Delete this account and everything hanging off it.
+ *
+ * Required by App Store guideline 5.1.1(v) — an app that lets people make an
+ * account has to let them delete it from inside the app — but it is the right
+ * thing for a health log regardless: this is the most personal data in here,
+ * and "ask the owner to run a script" is not a way to withdraw it.
+ *
+ * The password is asked for again because a phone left unlocked on a table is
+ * the realistic threat, not a forged POST. It is the same check sign-in makes,
+ * so a session alone cannot destroy a log.
+ *
+ * The delete itself is one row: every relation to `User` is `onDelete:
+ * Cascade`, so weigh-ins, meals and their items, day logs, friendships in both
+ * directions, notes sent and received, and push subscriptions all go with it.
+ * Nothing is soft-deleted — a deletion that leaves the data in the table is not
+ * the thing being asked for.
+ */
+export async function deleteAccountAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireUser();
+  const password = String(formData.get("password") ?? "");
+
+  const row = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!row) return { error: "Account not found." };
+  if (!(await verifyPin(password, row.pinHash, row.pinSalt))) {
+    return { error: "That password is not correct." };
+  }
+
+  await prisma.user.delete({ where: { id: user.id } });
+  // Ordered after the delete: a cookie cleared before a failed delete would
+  // sign someone out of an account that still exists.
+  await endSession();
+  redirect("/login");
+}

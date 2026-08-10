@@ -458,6 +458,29 @@ not get an invite.
 layer here is people sending each other short notes; an account called `helia`
 or `support` is a way to ask another tester for their password.
 
+**Deleting an account is a real delete, and it asks for the password.** App
+Store guideline 5.1.1(v) requires an in-app way to delete an account, but this
+is the right shape for a health log anyway: it is the most personal data here,
+and "ask the owner to run a script" is not a way to withdraw it. Nothing is
+soft-deleted — a deletion that leaves the rows in the table is not what is
+being asked for. The password is re-entered because the realistic threat is a
+phone left unlocked on a table, not a forged POST.
+
+**One `prisma.user.delete` is the whole thing**, because every relation to
+`User` is `onDelete: Cascade` — weigh-ins, day logs, meals and their items,
+friendships in both directions, notes sent *and* received, push subscriptions.
+Adding a table that hangs off `User` without a cascade would silently break
+deletion; the check is that `verify-delete` counts zero in each of them.
+`endSession()` runs *after* the delete, so a failed delete cannot sign someone
+out of an account that still exists.
+
+**The password rules live in one module, and that is not decoration.** For one
+commit `changePinAction` kept a local `/^\d{4,10}$/` after signup had moved to
+passwords, so the Settings screen would have refused a real password and
+insisted on digits — quietly downgrading anyone who used it back to a
+four-digit PIN. Every path that sets a credential now goes through
+`passwordProblem`.
+
 **`pinHash`/`pinSalt` now hold a password.** The names are historical. Renaming
 a column here means dropping one, which takes production down until a manual
 deploy lands (see below) — not worth it for a name. The schema comment says so
@@ -866,9 +889,6 @@ Duolingo, Apple Fitness), not yet implemented:
   falls back to `handle` lookup, and `usernameTaken()` has to check `handle` as
   well to keep that unambiguous. Both simplify away when
   `SELECT count(*) FROM "User" WHERE username IS NULL` reaches zero.
-- **Account deletion is required for the App Store.** Guideline 5.1.1(v): an
-  app that creates accounts must let people delete theirs from inside the app.
-  There is no such flow. Cheap now, a rejection later.
 - **Deploy.** As of 2026-08-10 production is still serving the Aug-6 build.
   `npx vercel deploy --prod` failed with *"Not authorized"* even though the same
   token reads fine (`whoami`, `project ls`, `project inspect` all work) and the

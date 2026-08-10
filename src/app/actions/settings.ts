@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { hashPin, requireUser, verifyPin } from "@/lib/auth";
 import { toLbs } from "@/lib/units";
 import { isValidTimezone } from "@/lib/dates";
+import { passwordProblem } from "@/lib/credentials";
 
 export type SettingsResult = { ok: boolean; error?: string; message?: string };
 
@@ -76,26 +77,35 @@ export async function saveSettingsAction(
   return { ok: true, message: "Saved." };
 }
 
-const PIN_RULE = /^\d{4,10}$/;
-
-export async function changePinAction(
+/**
+ * Change the account password.
+ *
+ * The rules come from `credentials.ts`, the same module signup and /setup use.
+ * They used to be a local `/^\d{4,10}$/` here, which quietly outlived the PIN:
+ * for one commit this screen would refuse a real password and insist on digits,
+ * downgrading anyone who used it back to a four-digit PIN. One rule, one place.
+ */
+export async function changePasswordAction(
   _prev: SettingsResult,
   formData: FormData,
 ): Promise<SettingsResult> {
   const user = await requireUser();
 
-  const current = String(formData.get("currentPin") ?? "");
-  const next = String(formData.get("newPin") ?? "");
-  const confirm = String(formData.get("confirmPin") ?? "");
+  const current = String(formData.get("currentPassword") ?? "");
+  const next = String(formData.get("newPassword") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
 
-  if (!PIN_RULE.test(next)) return { ok: false, error: "PIN must be 4–10 digits." };
-  if (next !== confirm) return { ok: false, error: "The two PINs do not match." };
+  const problem = passwordProblem(next, user.username ?? user.handle);
+  if (problem) return { ok: false, error: problem };
+  if (next !== confirm) {
+    return { ok: false, error: "The two passwords do not match." };
+  }
 
   const row = await prisma.user.findUnique({ where: { id: user.id } });
   if (!row) return { ok: false, error: "Account not found." };
 
   if (!(await verifyPin(current, row.pinHash, row.pinSalt))) {
-    return { ok: false, error: "Current PIN is incorrect." };
+    return { ok: false, error: "Current password is incorrect." };
   }
 
   const { hash, salt } = await hashPin(next);
@@ -104,7 +114,7 @@ export async function changePinAction(
     data: { pinHash: hash, pinSalt: salt },
   });
 
-  return { ok: true, message: "PIN updated." };
+  return { ok: true, message: "Password updated." };
 }
 
 /**

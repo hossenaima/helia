@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import {
-  changePinAction,
+  changePasswordAction,
   saveSettingsAction,
   type SettingsResult,
 } from "@/app/actions/settings";
@@ -124,21 +124,32 @@ export function GoalForm({
   );
 }
 
-export function PinChangeForm() {
-  const [state, formAction, pending] = useActionState(changePinAction, INITIAL);
+export function PasswordChangeForm() {
+  const [state, formAction, pending] = useActionState(
+    changePasswordAction,
+    INITIAL,
+  );
 
   return (
     <form action={formAction} className="mt-4 rounded-xl border border-rule bg-surface p-5">
-      <PinField id="currentPin" name="currentPin" label="Current PIN" />
-      <PinField id="newPin" name="newPin" label="New PIN" />
-      <PinField id="confirmPin" name="confirmPin" label="Confirm new PIN" />
+      <SecretField
+        id="currentPassword"
+        name="currentPassword"
+        label="Current password"
+      />
+      <SecretField id="newPassword" name="newPassword" label="New password" />
+      <SecretField
+        id="confirmPassword"
+        name="confirmPassword"
+        label="Confirm new password"
+      />
 
       <button
         type="submit"
         disabled={pending}
         className="btn btn-quiet mt-6 w-full"
       >
-        {pending ? "Updating" : "Change PIN"}
+        {pending ? "Updating" : "Change password"}
       </button>
 
       <Status state={state} />
@@ -182,7 +193,12 @@ function NumberField({
   );
 }
 
-function PinField({
+/**
+ * No `inputMode="numeric"` and no `pattern="\d*"` — both were right for a PIN
+ * and would now stop people typing the letters the password rules ask for. On
+ * a phone the numeric keypad alone would have.
+ */
+function SecretField({
   id,
   name,
   label,
@@ -200,12 +216,12 @@ function PinField({
         id={id}
         name={name}
         type="password"
-        inputMode="numeric"
-        pattern="\d*"
         autoComplete="off"
+        autoCapitalize="none"
+        maxLength={200}
         className="
-          tnum mt-2 w-40 border-b border-rule bg-transparent pb-1 text-lg
-          tracking-[0.3em] focus:border-trace focus:outline-none
+          mt-2 w-full border-b border-rule bg-transparent pb-1 text-lg
+          focus:border-trace focus:outline-none
         "
       />
     </div>

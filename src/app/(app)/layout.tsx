@@ -9,7 +9,7 @@ import { TimezoneSync } from "@/components/timezone-sync";
 export const dynamic = "force-dynamic";
 
 /**
- * Everything behind the PIN shares this frame.
+ * Everything behind the password shares this frame.
  *
  * The header and the tab bar live here rather than inside each page, which is
  * what makes switching tabs feel like switching tabs: they stay mounted, so a
