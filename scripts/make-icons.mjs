@@ -1,11 +1,16 @@
 /*
- * Derives `public/badge-96.png` from `public/icon-512.png`.
+ * Derives `public/icon-badge-96.png` from `public/icon-512.png`.
  * `node scripts/make-icons.mjs` — run it after changing the icon.
  *
  * A notification `badge` is an **alpha mask**, not an icon: Android keeps the
  * shape and throws the colour away. Pointing it at the full-colour icon, which
  * is what this used to do, put a grey blob in the status bar. So the badge is a
  * white silhouette on transparent.
+ *
+ * **The `icon-` prefix in the filename is load-bearing.** `proxy.ts` exempts
+ * `icon-*` from the auth gate, and the service worker fetches this while
+ * showing a notification — outside any session. Named `badge-96.png` it was
+ * redirected to `/login` with a 307 and never loaded.
  *
  * The silhouette is measured off the icon rather than drawn again, so the two
  * cannot drift apart. Alpha comes from how dark a pixel is, which keeps the
@@ -45,7 +50,7 @@ const badge = await sharp(mask, {
   .png()
   .toBuffer();
 
-await writeFile("public/badge-96.png", badge);
+await writeFile("public/icon-badge-96.png", badge);
 
 // Cheap check that the mask is actually a mask: a silhouette of this mark
 // should cover a slice of the canvas, not none of it and not all of it.
@@ -60,5 +65,5 @@ if (covered < 0.01 || covered > 0.5) {
 }
 
 console.log(
-  `wrote badge-96.png from ${SOURCE} (${(covered * 100).toFixed(1)}% coverage)`,
+  `wrote icon-badge-96.png from ${SOURCE} (${(covered * 100).toFixed(1)}% coverage)`,
 );

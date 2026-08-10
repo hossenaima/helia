@@ -624,13 +624,20 @@ the source of truth — there is no vector original.
   double-round.
 - The mark stays inside 23–77% of the canvas to survive Android's maskable crop.
 
-**`badge-96.png` is generated — `node scripts/make-icons.mjs`. Re-run it after
-changing the icon.** A notification badge is an alpha mask: Android keeps the
-shape and discards the colour, so pointing `badge` at the full-colour icon put
-a grey blob in the status bar. The silhouette is *measured off* `icon-512.png`
-rather than drawn again, so the two cannot drift; alpha comes from how dark each
-pixel is, which keeps the antialiased edges instead of thresholding them into
-jaggies.
+**`icon-badge-96.png` is generated — `node scripts/make-icons.mjs`. Re-run it
+after changing the icon.** A notification badge is an alpha mask: Android keeps
+the shape and discards the colour, so pointing `badge` at the full-colour icon
+put a grey blob in the status bar. The silhouette is *measured off*
+`icon-512.png` rather than drawn again, so the two cannot drift; alpha comes
+from how dark each pixel is, which keeps the antialiased edges instead of
+thresholding them into jaggies.
+
+**Its `icon-` prefix is load-bearing.** `proxy.ts` exempts `icon-*` from the
+auth gate, and the service worker fetches the badge while showing a
+notification — outside any session. Shipped as `badge-96.png` it was redirected
+to `/login` with a 307 and would never have loaded. Anything the OS or the
+service worker fetches has to match an exemption; naming it into the existing
+`icon-` rule is cheaper than adding another one.
 
 ---
 

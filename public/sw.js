@@ -22,7 +22,7 @@ self.addEventListener("push", (event) => {
       // A badge is an alpha mask — Android keeps the shape and discards the
       // colour. This used to point at the full-colour icon, which arrived in
       // the status bar as a grey blob.
-      badge: "/badge-96.png",
+      badge: "/icon-badge-96.png",
       tag: payload.tag || "helia",
       // Without this, a second push on the same tag replaces the first in
       // silence. A reminder that updates with no buzz reads as one that never
