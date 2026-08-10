@@ -60,6 +60,39 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  /**
+   * `?send=<username>` delivers one account's digest immediately, ignoring the
+   * Monday-at-your-hour gate. The counterpart of `--only` on the announce
+   * script: a preview shows the layout, only a real send shows what the mail
+   * client does with it.
+   *
+   * It deliberately does **not** set `lastDigestOn`. That column is the
+   * scheduler's bookkeeping, and a manual test writing to it would silently
+   * cancel the next real digest for that person.
+   */
+  const one = request.nextUrl.searchParams.get("send");
+  if (one) {
+    const target = await prisma.user.findFirst({
+      where: { OR: [{ username: one }, { handle: one }] },
+      select: { id: true },
+    });
+    if (!target) {
+      return NextResponse.json({ error: "no such account" }, { status: 404 });
+    }
+    const digest = await buildDigest(target.id);
+    if (!digest) {
+      return NextResponse.json({ error: "no email on file" }, { status: 400 });
+    }
+    await transport.sendMail({
+      from: `Helia <${process.env.GMAIL_USER}>`,
+      to: digest.email,
+      subject: digestSubject(digest),
+      text: renderDigestText(digest),
+      html: renderDigestHtml(digest),
+    });
+    return NextResponse.json({ sent: 1, to: digest.email, empty: digest.empty });
+  }
+
   const now = new Date();
   const candidates = await prisma.user.findMany({
     where: { notifyDigest: true, email: { not: null } },
