@@ -43,13 +43,21 @@ small celebrations when a milestone or a calorie target is met.
 - Live: <https://helia-plum.vercel.app>
 - Five tabs: **Weight** (`/`), **Calendar**, **Meals**, **Friends**, **Settings**
 
-**State of play, 2026-08-07.** Seven accounts, five of them testers. Everything
-below is deployed and `main` is pushed. Working: weigh-ins with a trend chart
-and lb/kg switch, the calendar and Apple Health import, meals with Gemini
-estimation and one-tap reuse of a past meal, friends with per-account sharing,
+**State of play, 2026-08-10.** Seven accounts, five of them testers. `main` is
+pushed. Working: weigh-ins with a trend chart and lb/kg switch, the calendar —
+which now shows each day's reading — and Apple Health import, meals with Gemini
+estimation and one-tap reuse of a past meal, friends with account-wide weight
+sharing and **per-friend** food sharing, a week chart behind each friend card,
 web push reminders on an hourly GitHub Actions sweep, and milestone
 celebrations. Not yet built: the steps-driven calorie bar. See
 [Open items](#open-items) for what is waiting.
+
+> **A migration and a deploy have to go together.** The per-friend sharing
+> migration dropped `User.shareMeals` while the old build was still live, and
+> `currentUser()` does a bare `findUnique` — so Prisma kept selecting a column
+> that no longer existed and every signed-in page load threw until the deploy
+> landed. A column drop is only safe once the code that reads it is gone.
+> Deploy first, or add and drop across two releases.
 
 The app is used mostly on an iPhone, first thing in the morning. Optimise for
 that: fast, quiet, few taps, works one-handed.
@@ -396,6 +404,15 @@ restore went in seven hours late.
 
 **Migrations are incremental and never reset.** Real data lives in this
 database. Write a new migration; do not `migrate reset`.
+
+**A column drop takes production down until the deploy lands.** Deploys here are
+manual, so `migrate deploy` and `vercel deploy --prod` are two separate acts and
+the gap between them is real downtime. `currentUser()` does a bare
+`findUnique`, which makes Prisma select *every* column its schema knows — so a
+dropped column breaks every signed-in page load on the old build, not just the
+feature that used it. This happened on 2026-08-10 with `User.shareMeals`. Deploy
+the code that stops reading the column first, then drop it; or accept the gap
+knowingly and keep it short.
 
 **Regenerate and restart after a schema change.** `npx prisma generate` writes
 to `src/generated/prisma`, and a running dev server keeps the old client in
