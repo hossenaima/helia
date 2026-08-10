@@ -130,12 +130,14 @@ Days are `"YYYY-MM-DD"` strings, never timestamps. Weights are always stored in
 
 - **User** — name/handle, `pinHash`/`pinSalt`, goal and target figures, `units`,
   `timezone`, `notifyWeighIn`/`notifyFriends`/`reminderHour`, `lastRemindedOn`,
-  `milestoneLbs` (largest celebration already shown), `shareWeight`/`shareMeals`
+  `milestoneLbs` (largest celebration already shown), `shareWeight`
 - **WeightEntry** — one per `(userId, date)`; re-submitting corrects it
 - **Meal** → **MealItem** — items carry `basis` (the estimator's working),
   `source`, and `precision` (`exact` | `estimated`)
 - **DayLog** — per-day `activeBurnKcal`
-- **Friendship** — one row with a `status`, not two mirrored rows
+- **Friendship** — one row with a `status`, not two mirrored rows; carries
+  `requesterSharesMeals`/`addresseeSharesMeals`, since food sharing is
+  per-friend and directional
 - **Encouragement** — `readAt` drives the 12-hour expiry
 - **PushSubscription** — unique by `endpoint`
 
@@ -246,18 +248,35 @@ extracted readings cross the network.
 **A friendship is one row with a `status`.** Both requester and addressee
 indexes exist because both directions get queried.
 
-**Sharing is the subject's decision, not the viewer's.** `User.shareWeight` and
-`shareMeals` govern what others see of *you*, one setting covering every
-friend — a per-friend matrix is a lot of bookkeeping for a
-seven-person app, and "who exactly can see my food" is not a question anyone
-wants to answer repeatedly.
+**Sharing is the subject's decision, not the viewer's.** Your flags govern what
+others see of *you*, never what you are willing to look at.
+
+**Weight is one switch; food is one per friend.** This reverses an earlier call
+here, on the owner's instruction (2026-08-10). The original reasoning was that a
+per-friend matrix is bookkeeping a seven-person app does not need and that "who
+exactly can see my food" is not a question anyone wants to answer repeatedly.
+That was half right: nobody wants to answer it about their *weight*, which is
+the same number whoever is looking, so `User.shareWeight` stays account-wide.
+Food turned out to be exactly the thing people do want to answer per person — a
+close friend and someone added last week are not the same audience for it.
+
+`Friendship.requesterSharesMeals` / `addresseeSharesMeals` hold it. **Two
+columns, because one row covers both directions** and A sharing with B says
+nothing about B sharing with A. Which column a write lands in depends on which
+end of the row you are, so `setMealSharingAction` fires two scoped
+`updateMany`s and lets their combined count be the existence check — that is
+also what stops a forged id from flipping somebody else's flag.
+
+The migration backfilled each friendship from the account flag it replaced, so
+it could only carry an existing choice across, never widen one. In the event
+every account had it off, so nothing was riding on that.
 
 **Enforced in `friendSummaries()`, never in the component.** A value that
 reaches the client has been shared whether or not anything renders it. The
 gating happens where the row is read, and food is not even fetched for people
 who share none of it.
 
-**`shareMeals` covers the day's total *and* the per-meal breakdown.** They were
+**Each meal flag covers the day's total *and* the per-meal breakdown.** They were
 two flags briefly. A calorie total you cannot attribute to anything is not much
 use, and the pair only made the incoherent combination "you may see 1,900 kcal
 but not that it was pizza" expressible.

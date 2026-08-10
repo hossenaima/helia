@@ -54,20 +54,12 @@ model User {
   /// Local hour (0–23) for the weigh-in reminder. `notifyWeighIn` decides
   /// whether it is sent at all; this only decides when.
   reminderHour  Int     @default(8)
-  /// What accepted friends may see. One setting for all of them — a per-friend
-  /// matrix is a lot of bookkeeping for a five-person app, and "who exactly
-  /// can see my food" is a question nobody wants to answer repeatedly.
+  /// Whether accepted friends see your weigh-ins. One switch for all of them:
+  /// the number is the same number whoever is looking, and defaults on because
+  /// friends could already see it.
   ///
-  /// Weight defaults on because friends could already see it. Food defaults
-  /// off: it was never visible, and turning sharing on for data that was
-  /// private would be deciding something on the user's behalf.
-  ///
-  /// `shareMeals` covers the day's calorie total *and* the per-meal
-  /// breakdown. They were two switches briefly; a total you cannot attribute
-  /// to anything is not much use, and the pair only invited the incoherent
-  /// combination of "you may see 1,900 kcal but not that it was pizza".
+  /// Food is not here — it is per-friend, on `Friendship`. See the note there.
   shareWeight Boolean @default(true)
-  shareMeals  Boolean @default(false)
 
   /// Largest weight-loss milestone already congratulated, in whole pounds.
   /// Without it the same "10 lb down" would greet you every morning, which
@@ -190,6 +182,26 @@ model Friendship {
 
   /// "pending" | "accepted"
   status String @default("pending")
+
+  /// Whether each side shares their food with the other, held per friendship
+  /// rather than per account. Weight is one switch for everyone; food is not,
+  /// because "who exactly sees what I ate" turns out to be a question people
+  /// do want to answer per person — a close friend and someone you added last
+  /// week are not the same audience for it.
+  ///
+  /// Two columns because one row covers both directions: A sharing with B says
+  /// nothing about B sharing with A.
+  ///
+  /// Both cover the day's calorie total *and* the per-meal breakdown. They
+  /// were separate flags once; a total you cannot attribute to anything is not
+  /// much use, and the pair only made "you may see 1,900 kcal but not that it
+  /// was pizza" expressible.
+  ///
+  /// Default false, like the account-wide flag they replaced: food was never
+  /// visible, so turning it on for anyone would be deciding on the user's
+  /// behalf.
+  requesterSharesMeals Boolean @default(false)
+  addresseeSharesMeals Boolean @default(false)
 
   createdAt   DateTime  @default(now())
   respondedAt DateTime?

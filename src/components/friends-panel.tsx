@@ -1,15 +1,17 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import {
   requestFriendAction,
   respondToRequestAction,
   removeFriendAction,
   sendEncouragementAction,
+  setMealSharingAction,
   type FriendResult,
 } from "@/app/actions/friends";
 import type { FriendSummary } from "@/lib/friends";
 import { FriendWeekChart } from "@/components/friend-week-chart";
+import { Toggle } from "@/components/sharing-controls";
 import { formatDayShort } from "@/lib/dates";
 import { formatDelta, fromLbs, type Units } from "@/lib/units";
 
@@ -115,7 +117,8 @@ export function FriendsPanel({
             {state.error ?? state.message ?? ""}
           </p>
           <p className="mt-1 text-xs text-ink-muted">
-            Once they accept, they see whatever you have switched on below.
+            Once they accept, they see your weight if you have that switched on
+            below. Your food stays private until you turn it on for them.
           </p>
         </form>
 
@@ -143,6 +146,10 @@ function FriendCard({
     INITIAL,
   );
   const [body, setBody] = useState("");
+  // Optimistic, like the settings toggles: a tap answers immediately and the
+  // server is the record rather than the render.
+  const [shareFood, setShareFood] = useState(friend.iShareMeals);
+  const [, startSharing] = useTransition();
 
   // Emptying the box is the receipt. Leaving the text sitting there reads as
   // "nothing happened", and the obvious response to that is to press Send
@@ -298,6 +305,23 @@ function FriendCard({
           </p>
         )}
       </form>
+
+      {/* Per friend, not per account: this is the one thing people wanted to
+          answer differently for different people. It sits on their card so the
+          person it applies to is on screen while you decide. */}
+      <div className="mt-3 border-t border-rule pt-1">
+        <Toggle
+          label="Let them see my food"
+          hint={`Today's total and each meal, for ${friend.name} only.`}
+          checked={shareFood}
+          onChange={(v) => {
+            setShareFood(v);
+            startSharing(async () => {
+              await setMealSharingAction({ friendId: friend.id, share: v });
+            });
+          }}
+        />
+      </div>
 
       <form action={removeFriendAction} className="mt-3">
         <input type="hidden" name="otherId" value={friend.id} />

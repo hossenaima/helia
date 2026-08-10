@@ -24,9 +24,12 @@ export type FriendSummary = {
   mealsToday: Array<{ name: string; calories: number }>;
   streak: number;
   loggedToday: boolean;
-  /** What they have chosen to show. Sent so the card can say "not shared"
-   *  rather than silently render an empty row. */
+  /** What they have chosen to show *you*. Sent so the card can say "not
+   *  shared" rather than silently render an empty row. */
   shares: { weight: boolean; meals: boolean };
+  /** Whether *you* share your food with them. Per-friend, so it is a control
+   *  on their card rather than one switch in Settings. */
+  iShareMeals: boolean;
 };
 
 /**
@@ -37,6 +40,9 @@ export type FriendSummary = {
  * value that reaches the client has already been shared regardless of whether
  * anything renders it.
  *
+ * Weight is one switch on the account; food is a flag on each friendship, so
+ * the answer differs per friend and has to be read from the link, not the user.
+ *
  * The streak and "logged today" are always visible. They say that a person
  * turned up, not what they weigh or ate, and with everything else off a friend
  * card would otherwise be a name and nothing to encourage.
@@ -46,7 +52,6 @@ const FRIEND_FIELDS = {
   name: true,
   timezone: true,
   shareWeight: true,
-  shareMeals: true,
 } as const;
 
 export async function friendSummaries(userId: string): Promise<FriendSummary[]> {
@@ -61,9 +66,17 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
     },
   });
 
-  const others = links.map((l) =>
-    l.requesterId === userId ? l.addressee : l.requester,
-  );
+  // Which side of the row you are on decides which meal flag is theirs and
+  // which is yours. Carried alongside the user so the mapping below never has
+  // to work it out twice.
+  const others = links.map((l) => {
+    const mine = l.requesterId === userId;
+    return {
+      ...(mine ? l.addressee : l.requester),
+      sharesMealsWithMe: mine ? l.addresseeSharesMeals : l.requesterSharesMeals,
+      iShareMeals: mine ? l.requesterSharesMeals : l.addresseeSharesMeals,
+    };
+  });
   if (others.length === 0) return [];
 
   const entries = await prisma.weightEntry.findMany({
@@ -79,7 +92,7 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
 
   // Only fetch food for the people who share some of it, and only their own
   // today — "today" differs per person, so each is filtered to their own date.
-  const foodSharers = others.filter((o) => o.shareMeals);
+  const foodSharers = others.filter((o) => o.sharesMealsWithMe);
   const meals = foodSharers.length
     ? await prisma.meal.findMany({
         where: {
@@ -123,12 +136,12 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
             lbs: mine.find((m) => m.date === date)?.weightLbs ?? null,
           }))
         : [],
-      caloriesToday: other.shareMeals
+      caloriesToday: other.sharesMealsWithMe
         ? Math.round(
             theirMeals.reduce((sum, m) => sum + mealNutrition(m).calories, 0),
           )
         : null,
-      mealsToday: other.shareMeals
+      mealsToday: other.sharesMealsWithMe
         ? theirMeals.map((m) => ({
             name: m.name,
             calories: Math.round(mealNutrition(m).calories),
@@ -138,7 +151,8 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
       // Still true when weight is private: it says they turned up, not what
       // the scale said.
       loggedToday: latest?.date === today,
-      shares: { weight: other.shareWeight, meals: other.shareMeals },
+      shares: { weight: other.shareWeight, meals: other.sharesMealsWithMe },
+      iShareMeals: other.iShareMeals,
     };
   });
 }

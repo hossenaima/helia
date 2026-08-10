@@ -173,20 +173,63 @@ export async function markEncouragementsReadAction() {
   revalidatePath("/friends");
 }
 
-/** What all your friends may see. One setting, not one per friend. */
+/** Whether your weigh-ins are visible. One setting for every friend — the
+ *  number is the same number whoever is looking. Food is per-friend; see
+ *  `setMealSharingAction`. */
 export async function setSharingAction(input: {
   shareWeight?: boolean;
-  shareMeals?: boolean;
+}): Promise<FriendResult> {
+  const me = await requireUser();
+  if (typeof input.shareWeight !== "boolean") return { ok: true };
+
+  await prisma.user.update({
+    where: { id: me.id },
+    data: { shareWeight: input.shareWeight },
+  });
+  revalidatePath("/friends");
+  return { ok: true };
+}
+
+/**
+ * Whether one particular friend sees your food.
+ *
+ * Which column to write depends on which end of the friendship row you are, so
+ * the update is scoped by `requesterId`/`addresseeId` naming *you* — that is
+ * both how the right column gets picked and how a forged id cannot flip
+ * somebody else's flag. A stranger's id simply matches no row.
+ */
+export async function setMealSharingAction(input: {
+  friendId: string;
+  share: boolean;
 }): Promise<FriendResult> {
   const me = await requireUser();
 
-  const data: typeof input = {};
-  for (const key of ["shareWeight", "shareMeals"] as const) {
-    if (typeof input[key] === "boolean") data[key] = input[key];
+  // Two statements rather than one, because the column depends on which side
+  // you are and `updateMany` cannot choose per row. At most one matches, and
+  // their combined count is the existence check — an id that is not actually
+  // your friend updates nothing and is reported as such.
+  const [asRequester, asAddressee] = await Promise.all([
+    prisma.friendship.updateMany({
+      where: {
+        status: "accepted",
+        requesterId: me.id,
+        addresseeId: input.friendId,
+      },
+      data: { requesterSharesMeals: input.share },
+    }),
+    prisma.friendship.updateMany({
+      where: {
+        status: "accepted",
+        requesterId: input.friendId,
+        addresseeId: me.id,
+      },
+      data: { addresseeSharesMeals: input.share },
+    }),
+  ]);
+  if (asRequester.count + asAddressee.count === 0) {
+    return { ok: false, error: "No such friend." };
   }
-  if (Object.keys(data).length === 0) return { ok: true };
 
-  await prisma.user.update({ where: { id: me.id }, data });
   revalidatePath("/friends");
   return { ok: true };
 }

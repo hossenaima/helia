@@ -4,7 +4,11 @@ import { useState, useTransition } from "react";
 import { setSharingAction } from "@/app/actions/friends";
 
 /**
- * What your friends see of you — one setting covering all of them.
+ * What your friends see of you.
+ *
+ * Weight lives here because it is one answer for everybody — the number is the
+ * same number whoever is looking. Food does not: it is a switch on each
+ * friend's own card, where the person it applies to is on screen.
  *
  * Stated as "friends can see", not "share my…", because the thing worth being
  * unambiguous about is who ends up looking. Held locally so a tap answers
@@ -12,21 +16,13 @@ import { setSharingAction } from "@/app/actions/friends";
  */
 export function SharingControls({
   shareWeight,
-  shareMeals,
   friendCount,
 }: {
   shareWeight: boolean;
-  shareMeals: boolean;
   friendCount: number;
 }) {
   const [weight, setWeight] = useState(shareWeight);
-  const [meals, setMeals] = useState(shareMeals);
   const [, startSaving] = useTransition();
-
-  const save = (input: Parameters<typeof setSharingAction>[0]) =>
-    startSaving(async () => {
-      await setSharingAction(input);
-    });
 
   return (
     <section className="mt-8" aria-label="What friends can see">
@@ -43,29 +39,27 @@ export function SharingControls({
         <div className="mt-4 space-y-1">
           <Toggle
             label="Weight"
-            hint="Your latest weigh-in and the change since the one before."
+            hint="Your latest weigh-in, the change since the one before, and your last seven days."
             checked={weight}
             onChange={(v) => {
               setWeight(v);
-              save({ shareWeight: v });
-            }}
-          />
-          <Toggle
-            label="Meals and calories"
-            hint="Today's total, and each meal with what it cost."
-            checked={meals}
-            onChange={(v) => {
-              setMeals(v);
-              save({ shareMeals: v });
+              startSaving(async () => {
+                await setSharingAction({ shareWeight: v });
+              });
             }}
           />
         </div>
+
+        <p className="mt-4 text-xs text-ink-muted">
+          Meals are set per friend — open someone&rsquo;s card to choose whether
+          they see your food.
+        </p>
       </div>
     </section>
   );
 }
 
-function Toggle({
+export function Toggle({
   label,
   hint,
   checked,
