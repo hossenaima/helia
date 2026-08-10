@@ -258,6 +258,20 @@ dish or a packaged bar stays whole; splitting a Big Mac into bun, patty and
 sauce is noise nobody can act on. **The model collapses to the dish name unless
 told this explicitly.**
 
+**A typed calorie total wins, and the estimate is scaled to fit it.** These
+were mutually exclusive at first — the branch was `if (useAi) … else if
+(manual)`, so typing a number *and* pressing the estimate button silently threw
+the number away and used a guess instead. Both are wanted at once: the estimator
+is what splits "chicken over rice" into components you can edit, and the figure
+off the label is what those components should sum to. `scaleToTotal` in
+`nutrition.ts` scales each item and its macros by the same ratio, then settles
+the rounding drift on the largest item — **rounding each part independently
+leaves the total a few calories off the number somebody typed precisely to stop
+arguing about it.** Its `__checkScale()` covers the awkward divisions.
+
+**A typed number is `exact` wherever it is typed**, on the manual path too. It
+was `estimated` there, which drew a ± band around a figure read off a packet.
+
 **An estimate you cannot argue with is just a number you have to trust.** Every
 item carries the estimator's working and is editable. Correcting one scales its
 macros by the same ratio and flips it to `exact` — once a person has adjusted

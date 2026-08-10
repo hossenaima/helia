@@ -1,3 +1,5 @@
+import type { EstimatedItem } from "@/lib/ai/estimator";
+
 /**
  * Everything the app knows about turning logged items into figures on screen.
  *
@@ -157,4 +159,141 @@ export function rollingAverage(
         : null,
     };
   });
+}
+
+/**
+ * Rescale an estimate so its parts add up to a total the person actually knows.
+ *
+ * Typing a calorie number and pressing the AI button used to be mutually
+ * exclusive: the branch was `if (useAi) … else if (manual)`, so the typed
+ * number was silently discarded and replaced with a guess. Both are wanted at
+ * once — the estimator is what splits "chicken over rice" into components you
+ * can edit, and the number off the label is what the components should sum to.
+ *
+ * Macros scale by the same ratio, which is exactly what editing a single item's
+ * calories already does elsewhere in the app.
+ *
+ * **The rounding is the whole job.** Scaling each item and rounding
+ * independently leaves the total a few calories off the number the person
+ * typed, which is precisely the number they typed it to avoid arguing with. The
+ * drift is settled on the largest item, where a 1–2 kcal correction is
+ * proportionally smallest and cannot push a small item negative.
+ */
+export function scaleToTotal(
+  items: EstimatedItem[],
+  total: number,
+): EstimatedItem[] {
+  if (items.length === 0) return items;
+
+  const estimated = items.reduce((sum, item) => sum + item.calories, 0);
+
+  // No basis for a split — an estimate with no calories in it at all. Spread
+  // the known total evenly rather than inventing a distribution.
+  const ratio = estimated > 0 ? total / estimated : 0;
+  const scaled = items.map((item) => ({
+    ...item,
+    calories:
+      estimated > 0
+        ? Math.round(item.calories * ratio)
+        : Math.round(total / items.length),
+    proteinG: scaleMacro(item.proteinG, ratio, estimated),
+    carbsG: scaleMacro(item.carbsG, ratio, estimated),
+    fatG: scaleMacro(item.fatG, ratio, estimated),
+    fiberG: scaleMacro(item.fiberG, ratio, estimated),
+    sodiumMg: scaleMacro(item.sodiumMg, ratio, estimated),
+    // The person supplied the total, so the meal is no longer an estimate and
+    // must not wear a ± band. The split between items is still the model's
+    // work, and its reasoning stays in `basis` for anyone who wants to argue.
+    precision: "exact" as const,
+  }));
+
+  const drift = total - scaled.reduce((sum, item) => sum + item.calories, 0);
+  if (drift !== 0) {
+    let biggest = 0;
+    for (let i = 1; i < scaled.length; i++) {
+      if (scaled[i].calories > scaled[biggest].calories) biggest = i;
+    }
+    scaled[biggest] = {
+      ...scaled[biggest],
+      calories: Math.max(0, scaled[biggest].calories + drift),
+    };
+  }
+
+  return scaled;
+}
+
+function scaleMacro(
+  value: number | null,
+  ratio: number,
+  estimated: number,
+): number | null {
+  if (value === null) return null;
+  // Nothing to scale against; the macro split would be a fabrication.
+  if (estimated <= 0) return null;
+  return Math.round(value * ratio * 10) / 10;
+}
+
+/**
+ * Self-check for `scaleToTotal`, whose entire job is an arithmetic promise:
+ * the parts add up to the number the person typed. Rounding each item
+ * independently breaks that by a few calories, which is exactly the argument
+ * they typed a number to avoid. Run with:
+ *
+ *   npx tsx -e "import('./src/lib/nutrition.ts').then(m => m.__checkScale())"
+ *
+ * Exported rather than hidden behind a flag so it can be called from anywhere,
+ * including the digest preview route while poking at real data.
+ */
+export function __checkScale(): string {
+  const item = (calories: number, proteinG: number | null = 10) =>
+    ({
+      name: "x",
+      quantity: null,
+      basis: null,
+      calories,
+      proteinG,
+      carbsG: 5,
+      fatG: 2,
+      fiberG: null,
+      sodiumMg: null,
+      precision: "estimated",
+    }) as EstimatedItem;
+
+  const sum = (xs: EstimatedItem[]) =>
+    xs.reduce((n, i) => n + i.calories, 0);
+
+  const cases: Array<[string, EstimatedItem[], number]> = [
+    ["exact division", [item(100), item(100)], 400],
+    ["awkward thirds", [item(100), item(100), item(100)], 1000],
+    ["scaling down", [item(900), item(50), item(50)], 137],
+    ["single item", [item(742)], 3000],
+    ["zero total", [item(100), item(200)], 0],
+    ["lopsided", [item(1), item(1), item(998)], 777],
+    ["no calories at all", [item(0), item(0)], 500],
+  ];
+
+  for (const [label, items, total] of cases) {
+    const out = scaleToTotal(items, total);
+    if (sum(out) !== total) {
+      throw new Error(`${label}: parts sum to ${sum(out)}, expected ${total}`);
+    }
+    if (out.some((i) => i.calories < 0)) {
+      throw new Error(`${label}: produced a negative item`);
+    }
+    if (out.some((i) => i.precision !== "exact")) {
+      throw new Error(`${label}: a typed total must mark items exact`);
+    }
+  }
+
+  // An estimate with no calories to divide has no macro split to preserve
+  // either — inventing one would be a fabrication.
+  const noBasis = scaleToTotal([item(0), item(0)], 500);
+  if (noBasis.some((i) => i.proteinG !== null)) {
+    throw new Error("macros must be dropped when there is nothing to scale");
+  }
+
+  // Empty in, empty out — no division by zero.
+  if (scaleToTotal([], 500).length !== 0) throw new Error("empty should stay empty");
+
+  return `scaleToTotal: ${cases.length + 2} checks passed`;
 }

@@ -87,6 +87,13 @@ export function MealForm({
           />
         </div>
 
+        {/* The box and the AI button look like alternatives and are not: a
+            typed total is kept and the estimate is scaled to match it. Nothing
+            in the layout said so. */}
+        <p className="w-full order-last text-xs text-ink-muted">
+          Know the total? Type it — an estimate will be split to add up to it.
+        </p>
+
         <button
           type="button"
           onClick={() => setShowMacros((v) => !v)}

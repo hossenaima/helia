@@ -10,6 +10,7 @@ import {
   getEstimator,
   type EstimatedItem,
 } from "@/lib/ai/estimator";
+import { scaleToTotal } from "@/lib/nutrition";
 
 export type MealActionResult = {
   ok: boolean;
@@ -47,6 +48,16 @@ export async function saveMealAction(
   const useAi = formData.get("estimate") === "1";
   const manualCalories = formData.get("calories");
 
+  const typedRaw = String(manualCalories ?? "").trim();
+  let typedCalories: number | null = null;
+  if (typedRaw !== "") {
+    const value = Number(typedRaw);
+    if (!Number.isFinite(value) || value < 0) {
+      return { ok: false, error: "Calories must be a number." };
+    }
+    typedCalories = value;
+  }
+
   let items: EstimatedItem[] = [];
   let aiNote: string | undefined;
 
@@ -71,11 +82,18 @@ export async function saveMealAction(
           "Estimation failed. Save it with a calorie number instead, or try again.",
       };
     }
-  } else if (manualCalories !== null && String(manualCalories).trim() !== "") {
-    const calories = Number(manualCalories);
-    if (!Number.isFinite(calories) || calories < 0) {
-      return { ok: false, error: "Calories must be a number." };
+
+    // A typed total wins over the estimate. The model still decides what the
+    // components are and how they divide; it does not get to overrule a number
+    // the person read off a label or a menu.
+    if (typedCalories !== null) {
+      items = scaleToTotal(items, typedCalories);
+      aiNote = aiNote
+        ? `${aiNote} Scaled to your ${typedCalories.toLocaleString()} kcal.`
+        : `Scaled to your ${typedCalories.toLocaleString()} kcal.`;
     }
+  } else if (typedCalories !== null) {
+    const calories = typedCalories;
     items = [
       {
         name: note.slice(0, 200),
@@ -87,7 +105,10 @@ export async function saveMealAction(
         fatG: optionalGrams(formData.get("fat")),
         fiberG: optionalGrams(formData.get("fiber")),
         sodiumMg: optionalGrams(formData.get("sodium")),
-        precision: "estimated",
+        // Typed by the person, so it is their number — the same rule the AI
+        // path follows when a total is supplied. It was "estimated" here, which
+        // put a ± band around a figure somebody had read off a label.
+        precision: "exact",
       },
     ];
   }
