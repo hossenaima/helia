@@ -268,6 +268,19 @@ was never visible, so defaulting it on would publish food logs on the user's
 behalf. Any future sharing flag follows the same rule, and a migration that
 merges flags takes the OR so it can only preserve a choice, never widen it.
 
+**The friend card opens to a week chart, and it is a `<details>`.** The header
+row is the `<summary>`; nothing in it is interactive, which is what makes that
+legal. No open/closed state, no handler, and keyboard and screen-reader
+behaviour for free.
+
+**That sparkline is inline SVG, not Recharts.** The Weight tab already pays for
+Recharts; the Friends tab does not, and one seven-point line is not worth
+putting the chart runtime on a second route. It is also less code than
+configuring a `<LineChart>` would have been. Its y-range is the *week's* spread,
+deliberately unlike the main chart's rule — this one answers "how has their week
+gone", where the main one answers "where am I against my goal", so a quiet week
+should still show shape rather than flatten.
+
 **A friend's gain is not scored.** The delta renders in `--down` for a loss and
 inherits the muted text otherwise. Rust `--up` and an ↑ told someone off for
 their morning on the one screen built for encouragement — your own Weight tab

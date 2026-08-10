@@ -9,6 +9,7 @@ import {
   type FriendResult,
 } from "@/app/actions/friends";
 import type { FriendSummary } from "@/lib/friends";
+import { FriendWeekChart } from "@/components/friend-week-chart";
 import { formatDayShort } from "@/lib/dates";
 import { formatDelta, fromLbs, type Units } from "@/lib/units";
 
@@ -157,16 +158,43 @@ function FriendCard({
       // Capped, or the tenth row would still be waiting after half a second.
       style={{ animationDelay: `${Math.min(index, 6) * 45}ms` }}
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="min-w-0 flex-1 truncate font-bold">{friend.name}</p>
-        <span className="tnum shrink-0 text-sm">
-          {friend.latestLbs !== null
-            ? `${fromLbs(friend.latestLbs, units).toFixed(1)} ${units}`
-            : friend.shares.weight
-              ? "—"
-              : ""}
-        </span>
-      </div>
+      {/* A native disclosure: the header row is the summary, the week chart is
+          the content. No state, no toggle handler, and the keyboard and screen
+          reader behaviour comes free. Nothing inside the summary is itself
+          interactive, which is what makes that legal. */}
+      <details className="group">
+        <summary
+          className="
+            -m-1 flex cursor-pointer list-none items-baseline justify-between
+            gap-3 rounded-lg p-1
+            [&::-webkit-details-marker]:hidden
+          "
+        >
+          <p className="min-w-0 flex-1 truncate font-bold">{friend.name}</p>
+          <span className="tnum shrink-0 text-sm">
+            {friend.latestLbs !== null
+              ? `${fromLbs(friend.latestLbs, units).toFixed(1)} ${units}`
+              : friend.shares.weight
+                ? "—"
+                : ""}
+          </span>
+          {friend.shares.weight && (
+            <span
+              aria-hidden
+              className="shrink-0 text-ink-faint transition-transform group-open:rotate-90"
+            >
+              ›
+            </span>
+          )}
+        </summary>
+        {friend.shares.weight ? (
+          <FriendWeekChart week={friend.week} units={units} />
+        ) : (
+          <p className="mt-3 text-xs text-ink-muted">
+            {friend.name} keeps their weight private.
+          </p>
+        )}
+      </details>
 
       <p className="mt-1 text-xs text-ink-muted">
         {!friend.shares.weight ? (

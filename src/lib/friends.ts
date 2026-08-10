@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
-import { weighInStreak } from "@/lib/calendar";
+import { weekEnding, weighInStreak } from "@/lib/calendar";
 import { todayIn } from "@/lib/dates";
 import { mealNutrition } from "@/lib/nutrition";
 
@@ -13,6 +13,11 @@ export type FriendSummary = {
   latestDate: string | null;
   /** Change since their previous weigh-in, in pounds. */
   changeLbs: number | null;
+  /** Their last seven days, oldest first, for the card's sparkline. Always
+   *  seven slots so the chart can space them by calendar day; an unlogged day
+   *  is null, because a gap is a gap and not a zero. Empty when weight is not
+   *  shared. */
+  week: Array<{ date: string; lbs: number | null }>;
   /** Today's intake in kcal, when they share their food. */
   caloriesToday: number | null;
   /** Today's meals with what each one cost, when they share their food. */
@@ -110,6 +115,14 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
         other.shareWeight && latest && previous
           ? latest.weightLbs - previous.weightLbs
           : null,
+      // Gated on the same flag as the figures above it: a week of readings is
+      // still their weight, and drawing it would share what the number hides.
+      week: other.shareWeight
+        ? weekEnding(today).map((date) => ({
+            date,
+            lbs: mine.find((m) => m.date === date)?.weightLbs ?? null,
+          }))
+        : [],
       caloriesToday: other.shareMeals
         ? Math.round(
             theirMeals.reduce((sum, m) => sum + mealNutrition(m).calories, 0),
