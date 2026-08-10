@@ -16,11 +16,14 @@ export function SetupForm({ suggestion }: { suggestion: string }) {
   return (
     <form action={formAction} className="mt-8 space-y-5">
       <TextField
+        // See PinForm: the reset after an action reverts to `defaultValue`, so
+        // a rejected attempt has to hand back what was typed or the box empties.
+        key={state.values?.username ?? suggestion}
         id="username"
         name="username"
         label="Username"
         hint="Lowercase letters, numbers and underscores. No spaces."
-        defaultValue={suggestion}
+        defaultValue={state.values?.username ?? suggestion}
         autoComplete="username"
         autoCapitalize="none"
         maxLength={20}

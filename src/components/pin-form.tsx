@@ -32,10 +32,15 @@ export function PinForm({
 
       {isSignup && (
         <TextField
+          // Keyed on the value React is restoring to. The form reset that
+          // follows an action reverts each input to its `defaultValue`, and
+          // remounting is what guarantees the new one is in place first.
+          key={`name-${state.values?.name ?? ""}`}
           id="name"
           name="name"
           label="Display name"
           hint="What friends see on your card. Spaces are fine here."
+          defaultValue={state.values?.name ?? ""}
           autoComplete="name"
           autoCapitalize="words"
           maxLength={30}
@@ -44,6 +49,10 @@ export function PinForm({
       )}
 
       <TextField
+        key={`id-${state.values?.username ?? state.values?.name ?? ""}`}
+        defaultValue={
+          (isSignup ? state.values?.username : state.values?.name) ?? ""
+        }
         id="name-or-username"
         // Still `name`: sign-in accepts a username or the name an older
         // account has always typed, and the action decides which it is.

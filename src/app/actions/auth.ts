@@ -18,7 +18,25 @@ import {
   usernameProblem,
 } from "@/lib/credentials";
 
-export type FormState = { error?: string };
+/**
+ * `values` is what the person had typed, echoed back so a rejected form can
+ * refill itself.
+ *
+ * React resets a `<form action={serverAction}>` once the action returns — on
+ * failure as well as success — and an uncontrolled input reverts to its
+ * `defaultValue`, which is empty. So a single mistyped username silently wiped
+ * the display name too, and the retry then complained about *that* field
+ * instead: an error message pointing at something the form had just cleared
+ * for you. Feeding the submitted values back as `defaultValue` is what the
+ * reset lands on.
+ *
+ * Passwords are deliberately not in here. Nothing is gained by echoing one to
+ * the client, and retyping it after a rejection is what people expect.
+ */
+export type FormState = {
+  error?: string;
+  values?: { name?: string; username?: string };
+};
 
 const NAME_RULE = /^[\p{L}\p{N} '._-]{2,30}$/u;
 
@@ -56,21 +74,27 @@ export async function signupAction(
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
+  // Every rejection carries the typed values back, or the form clears itself.
+  const fail = (error: string): FormState => ({
+    error,
+    values: { name, username },
+  });
+
   if (!NAME_RULE.test(name)) {
-    return { error: "Use 2–30 letters or numbers for your name." };
+    return fail("Use 2–30 letters or numbers for your name.");
   }
   const badUsername = usernameProblem(username);
-  if (badUsername) return { error: badUsername };
+  if (badUsername) return fail(badUsername);
   const badPassword = passwordProblem(password, username);
-  if (badPassword) return { error: badPassword };
-  if (password !== confirm) return { error: "The two passwords do not match." };
+  if (badPassword) return fail(badPassword);
+  if (password !== confirm) return fail("The two passwords do not match.");
 
   const handle = toHandle(name);
   if (await prisma.user.findUnique({ where: { handle } })) {
-    return { error: "That name is taken. Pick another." };
+    return fail("That name is taken. Pick another.");
   }
   if (await usernameTaken(username)) {
-    return { error: "That username is taken. Pick another." };
+    return fail("That username is taken. Pick another.");
   }
 
   const { hash, salt } = await hashPin(password);
@@ -95,7 +119,7 @@ export async function signupAction(
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return { error: "That name or username is taken. Pick another." };
+      return fail("That name or username is taken. Pick another.");
     }
     throw error;
   }
@@ -123,13 +147,15 @@ export async function completeSetupAction(
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
+  const fail = (error: string): FormState => ({ error, values: { username } });
+
   const badUsername = usernameProblem(username);
-  if (badUsername) return { error: badUsername };
+  if (badUsername) return fail(badUsername);
   const badPassword = passwordProblem(password, username);
-  if (badPassword) return { error: badPassword };
-  if (password !== confirm) return { error: "The two passwords do not match." };
+  if (badPassword) return fail(badPassword);
+  if (password !== confirm) return fail("The two passwords do not match.");
   if (await usernameTaken(username, user.id)) {
-    return { error: "That username is taken. Pick another." };
+    return fail("That username is taken. Pick another.");
   }
 
   const { hash, salt } = await hashPin(password);
@@ -140,7 +166,7 @@ export async function completeSetupAction(
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return { error: "That username is taken. Pick another." };
+      return fail("That username is taken. Pick another.");
     }
     throw error;
   }
@@ -168,7 +194,10 @@ export async function loginAction(
 
   // One message for both a missing account and a wrong secret, so this page
   // cannot be used to find out who has an account here.
-  const rejected = { error: "That username and password do not match an account." };
+  const rejected: FormState = {
+    error: "That username and password do not match an account.",
+    values: { name: typed },
+  };
   if (!user) return rejected;
   if (!(await verifyPin(secret, user.pinHash, user.pinSalt))) return rejected;
 

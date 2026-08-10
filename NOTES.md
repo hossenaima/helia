@@ -567,6 +567,18 @@ Grouped by where they bite.
   indicator driven by it is always a beat behind. Use an optimistic value.
 - **`currentUser()` is wrapped in React `cache()`** — the layout and the page
   both ask, and without it that is two identical queries per navigation.
+- **React resets a `<form action={serverAction}>` after the action returns —
+  on failure as well as success.** Uncontrolled inputs revert to their
+  `defaultValue`, which is usually empty, so a rejected form clears every field
+  including the ones that were right. On signup that meant one mistyped
+  username also wiped the display name, and the retry then complained *"Use
+  2–30 letters or numbers for your name"* — an error pointing at a field the
+  form had just emptied itself. The fix is to echo the submitted values back in
+  the action's return state and feed them to `defaultValue`, keyed so the input
+  remounts with the new value before the reset lands on it. Passwords are
+  deliberately left out of that echo. **This is invisible to a test that
+  reloads the page between attempts**, which is why it survived to production:
+  every local check navigated fresh, and only a real retry found it.
 - **A submit button's `name`/`value` is serialised natively.** Setting React
   state in `onClick` to record which button was pressed *races the submission*
   and can send the previous value.
