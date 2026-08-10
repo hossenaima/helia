@@ -3,6 +3,10 @@ import { dayKeyToDate } from "@/lib/dates";
 /**
  * The last seven days at a glance: which ones you logged, and where today sits.
  * Pairs with the streak count, which is otherwise just an assertion.
+ *
+ * A filled day is neutral ink, not `--trace`. Colour is reserved for data, and
+ * `--trace` means *weight* — spending it on attendance says a day you turned up
+ * is the same kind of thing as the number you weighed.
  */
 export function WeekStrip({
   days,
@@ -33,9 +37,9 @@ export function WeekStrip({
                 rounded-2xl text-sm font-bold
                 ${
                   has
-                    ? "bg-trace text-white"
+                    ? "bg-ink text-ground"
                     : isToday
-                      ? "bg-surface-sunk ring-2 ring-trace/40"
+                      ? "bg-surface-sunk ring-2 ring-ink/25"
                       : "bg-surface-sunk text-ink-faint"
                 }
               `}

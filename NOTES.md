@@ -193,6 +193,13 @@ the flow with one slow sweep of the accent, and a dismiss.
 **"On target" needs food in it.** A day under target with nothing logged is an
 empty day, not an achievement, so the calorie note requires at least one meal.
 
+**Reassurance does not need food in it.** The opposite rule applies to the
+water-retention banner, and gating it on a flagged meal was a bug: the physiology
+does not depend on the log. A pound of fat is thousands of calories, so an
+overnight jump is water and digestion whether or not anything was written down —
+and a bad morning after an unlogged evening is the one *most* in need of the
+note. A flagged meal now only decides whether the banner names a culprit.
+
 ### Meals
 
 **Targets are entered by hand, never derived.** Mifflin-St Jeor can be off by
@@ -254,6 +261,12 @@ accepted friends, so defaulting it off would silently withdraw something. Food
 was never visible, so defaulting it on would publish food logs on the user's
 behalf. Any future sharing flag follows the same rule, and a migration that
 merges flags takes the OR so it can only preserve a choice, never widen it.
+
+**A friend's gain is not scored.** The delta renders in `--down` for a loss and
+inherits the muted text otherwise. Rust `--up` and an ↑ told someone off for
+their morning on the one screen built for encouragement — your own Weight tab
+still colours both directions, because that is your data and the feedback is the
+point.
 
 **Streak and "logged today" are always visible.** They say a person turned up,
 not what they weigh or ate, and with everything else off a friend card would
@@ -477,6 +490,10 @@ rest of the app stays light.
 **Colour is reserved for data.** An earlier pass gave each tile its own pastel
 and read as noise. The only saturated things on screen mean something.
 
+**And `--trace` in particular means *weight*.** The week strip used to fill
+logged days with it, which said a day you turned up is the same kind of thing as
+the number you weighed. Attendance is neutral ink; the trace is for the trace.
+
 **The neutrals are neutral.** They used to carry a green cast at every step,
 which put a second green on screen arguing with the trace and read as olive.
 
@@ -662,14 +679,10 @@ Duolingo, Apple Fitness), not yet implemented:
   only thing firing was the daily Vercel backstop.
 - The steps-driven dynamic calorie bar is **deferred, not dropped**.
 
-**Verified bugs, not yet fixed:**
-
-- The water-retention banner requires `priorTags.length > 0`, so a gain with no
-  logged meal gets no reassurance — likely most bad mornings.
-- A friend's weight *gain* renders in `--up` (rust) with an ↑ arrow on the one
-  screen built for encouragement.
-- The week strip fills logged days with `bg-trace`, spending the colour that
-  means *weight* on attendance instead.
+*(The three verified bugs listed here — the gated water-retention banner, the
+rust arrow on a friend's gain, and the week strip spending `--trace` — were
+fixed on 2026-08-10. The reasoning moved into Load-bearing decisions and the
+Design system.)*
 
 ## Decisions waiting on the owner
 

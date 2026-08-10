@@ -99,11 +99,10 @@ export default async function WeightPage() {
     latest && previous && latest.date === addDays(previous.date, 1)
       ? latest.weightLbs - previous.weightLbs
       : null;
-  const showBanner =
-    overnightGain !== null &&
-    overnightGain >= 0.8 &&
-    priorTags.length > 0 &&
-    culpritDate !== null;
+  // A flagged meal explains the jump; its absence does not make the jump fat.
+  // Requiring one meant the reassurance skipped every bad morning that followed
+  // an unlogged evening, which is most of them.
+  const showBanner = overnightGain !== null && overnightGain >= 0.8;
 
   const loggedDates = new Set(entries.map((e) => e.date));
   const week = weekEnding(today);
@@ -132,7 +131,7 @@ export default async function WeightPage() {
           gainLbs={fromLbs(overnightGain, units)}
           units={units}
           tags={priorTags}
-          onDate={culpritDate!}
+          onDate={culpritDate}
         />
       )}
       {latest ? (

@@ -181,7 +181,10 @@ function FriendCard({
             {friend.changeLbs !== null && (
               <>
                 {" · "}
-                <span className={friend.changeLbs < 0 ? "text-down" : "text-up"}>
+                {/* A loss is worth colouring; a gain is not scored. Rust and an
+                    ↑ on the one screen built for encouragement told a friend
+                    off for their morning. The arrow still says which way. */}
+                <span className={friend.changeLbs < 0 ? "text-down" : ""}>
                   {friend.changeLbs < 0 ? "↓" : "↑"}{" "}
                   {formatDelta(friend.changeLbs, units)}
                 </span>
