@@ -741,6 +741,22 @@ Duolingo, Apple Fitness), not yet implemented:
 
 **Needs the owner to act:**
 
+- **Deploy.** As of 2026-08-10 production is still serving the Aug-6 build.
+  `npx vercel deploy --prod` failed with *"Not authorized"* even though the same
+  token reads fine (`whoami`, `project ls`, `project inspect` all work) and the
+  project id in `.vercel/project.json` matches the real project under
+  `vthecookie-6604's projects`. Try `npx vercel login` first. Everything from
+  2026-08-10 is committed and pushed but **not live**.
+- **`User.shareMeals` is an orphan column.** It was dropped by
+  `20260810120000_per_friend_meal_sharing`, which broke the still-live Aug-6
+  build — see the warning in
+  [Working on this database safely](#working-on-this-database-safely) — so it
+  was added straight back by hand to end the outage. Every value is `false`,
+  which is exactly what it held before. Nothing reads it. **Once the deploy
+  lands, drop it in a follow-up migration**; do not add that migration before
+  the deploy, because `npm run build` runs `migrate deploy` while the old build
+  is still serving and would re-open the same outage for the length of the
+  build.
 - **Rotate the Gemini API key.** It was pasted in plaintext during the build.
   (The Supabase password and region were explicitly left alone on request.)
 
