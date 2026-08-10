@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { dayKeyIn, isValidTimezone, todayIn } from "@/lib/dates";
 import { pushToUser } from "@/lib/push";
 import { noteCutoff } from "@/lib/friends";
+import { weighInStreak } from "@/lib/calendar";
 
 /**
  * Reminder sweep. Meant to be called every hour — see `.github/workflows` —
@@ -63,20 +64,37 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const already = await prisma.weightEntry.findUnique({
-      where: { userId_date: { userId: user.id, date: today } },
+    // Recent days rather than just today's row: the same read answers "have
+    // they logged?" and "what is their streak?", and the reminder is worth more
+    // when it can say what is actually at stake.
+    const recent = await prisma.weightEntry.findMany({
+      where: { userId: user.id },
+      orderBy: { date: "desc" },
+      take: 60,
       select: { date: true },
     });
-    if (already) {
+    if (recent.some((r) => r.date === today)) {
       skippedAlreadyLogged++;
       continue;
     }
 
+    const streak = weighInStreak(
+      recent.map((r) => r.date),
+      today,
+    ).current;
+
     const result = await pushToUser(user.id, {
       title: "Morning weigh-in",
-      body: "A few seconds now keeps the line going.",
+      // Naming the streak gives the notification something to be about. A
+      // generic nudge is the same sentence every morning, which is how a
+      // reminder turns into wallpaper.
+      body:
+        streak > 0
+          ? `${streak} day${streak === 1 ? "" : "s"} in a row so far — a few seconds keeps it going.`
+          : "A few seconds now and today is on the board.",
       url: "/",
       tag: "weigh-in",
+      at: now.getTime(),
     });
     if (result.sent > 0) {
       notified++;

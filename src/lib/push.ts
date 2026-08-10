@@ -31,6 +31,9 @@ export type PushPayload = {
   body: string;
   url?: string;
   tag?: string;
+  /** When the thing being notified about happened. A push delivered late
+   *  otherwise timestamps itself late in the tray. */
+  at?: number;
 };
 
 export async function pushToUser(

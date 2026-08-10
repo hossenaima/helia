@@ -62,11 +62,15 @@ export async function requestFriendAction(
     data: { requesterId: me.id, addresseeId: them.id },
   });
 
+  // The title is the line that gets read on a locked phone, so it carries who
+  // rather than what kind. "Friend request" over "Aima wants to be friends"
+  // spent the loudest line saying nothing.
   await notifyFriendActivity(them.id, {
-    title: "Friend request",
-    body: `${me.name} wants to be friends on Helia.`,
+    title: `${me.name} wants to be friends`,
+    body: "Tap to accept or ignore.",
     url: "/friends",
     tag: "friend-request",
+    at: Date.now(),
   });
 
   revalidatePath("/friends");
@@ -158,6 +162,7 @@ export async function sendEncouragementAction(
     // Not tagged per-sender: a second note should not silently replace the
     // first one sitting unread in the tray.
     tag: `note-${Date.now()}`,
+    at: Date.now(),
   });
 
   revalidatePath("/friends");

@@ -19,8 +19,18 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body: payload.body || "Time to log.",
       icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      // A badge is an alpha mask — Android keeps the shape and discards the
+      // colour. This used to point at the full-colour icon, which arrived in
+      // the status bar as a grey blob.
+      badge: "/badge-96.png",
       tag: payload.tag || "helia",
+      // Without this, a second push on the same tag replaces the first in
+      // silence. A reminder that updates with no buzz reads as one that never
+      // came.
+      renotify: Boolean(payload.tag),
+      // When the event happened, not when the device happened to receive it —
+      // a push delivered late otherwise timestamps itself late.
+      timestamp: payload.at || Date.now(),
       data: { url: payload.url || "/" },
     }),
   );

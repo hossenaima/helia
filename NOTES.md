@@ -337,6 +337,20 @@ and the `vercel.json` cron is a daily backstop.
 overlap**, so `User.lastRemindedOn` makes it idempotent per day. Calling it
 repeatedly is safe by design; that is what lets a free scheduler drive it.
 
+**A `badge` is an alpha mask, not an icon.** Android keeps the shape and throws
+the colour away, so pointing `badge` at the full-colour `icon-192` put a grey
+blob in the status bar. It is `badge-96.png` — a white silhouette on
+transparent, generated alongside the rest.
+
+**The notification title carries who, not what kind.** "Friend request" spent
+the one line read on a locked phone saying nothing; it is "Aima wants to be
+friends" now, with the category demoted to the body.
+
+**The morning reminder names the streak.** The same sentence every day is how a
+reminder becomes wallpaper. The sweep already had to ask whether today was
+logged, so it reads the recent days instead of one row and gets the streak from
+the same query.
+
 **`notifyFriendActivity` never throws into its caller.** A push service being
 slow is not a reason for the friend request itself to fail.
 
@@ -565,13 +579,25 @@ near-white page there is nothing to refract.
 
 ### Icons
 
+**Every icon is generated — `node scripts/make-icons.mjs`.** One vector
+definition produces `icon-512`, `icon-192`, `apple-touch-icon`, `badge-96` and
+`icon.svg`. Edit the script, never the PNGs.
+
+- The mark is a **sun above a descending trace**. Helia means sun, the app is a
+  morning ritual, and the line is what it is about, so the three ideas are one
+  drawing.
+- **The rays are load-bearing.** A plain disc above a line reads as a head over
+  a pair of shoulders — four attempts did, at every size. Rays are what make it
+  a sun rather than a face. Don't "simplify" them away.
+- An S-curve was tried first; at home-screen size two inflections read as a
+  squiggle. One descent survives the scale.
 - `apple-touch-icon.png` is 180×180, **opaque and un-rounded**. iOS composites
   transparency onto black and applies its own mask, so pre-rounded corners
   double-round.
 - The mark stays inside 23–77% of the canvas to survive Android's maskable crop,
-  and uses the literal `--ground` and `--trace` tokens.
-- An S-curve was tried first; at home-screen size two inflections read as a
-  squiggle. One descent survives the scale.
+  and uses the literal `--ground` and `--trace` tokens. **The check includes
+  stroke width and ray length**, because round caps overshoot their endpoint by
+  half a stroke; the script throws rather than emit something Android will clip.
 
 ---
 
