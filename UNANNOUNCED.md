@@ -25,7 +25,7 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
-*As of 2026-08-11.*
+*As of 2026-08-11. All deployed and live.*
 
 - **Nothing to delete by accident.** The little × at the end of every row of the
   weight log is gone. A tester deleted a weigh-in with it by mistake, and the
