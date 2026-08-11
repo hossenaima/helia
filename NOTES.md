@@ -409,6 +409,14 @@ what "take a photo or choose one" actually needs.
 portrait photo carries its rotation in EXIF, and a canvas that ignores it
 uploads the meal lying on its side.
 
+**A picture with no food in it says "No food detected." and nothing else.** The
+model's own account of what it saw instead is discarded on this path. Asked to
+read a screenshot it replied "a login screen for a health log application, not
+any food items" — accurate, faintly unnerving to have read back to you, and no
+help at all. The person needs to know that nothing was logged; being told the
+model was watching is not part of that. The text path still shows its note,
+because there the note usually explains a genuine ambiguity in the words.
+
 **Items get `source: "photo"`, not `"ai"`.** Same estimator, but where a figure
 came from is worth keeping — the same reasoning as `WeightEntry.source`. It is
 what lets the card say "read from your photo" instead of "from your
@@ -1115,6 +1123,12 @@ that works:
   `.toLowerCase()` succeeds.
 - `form button[type="submit"]` matches the header Lock form too. Scope it.
 - `::-p-text(Save)` also matches "Save meal".
+- **Polling `body.innerText` for a result string matches the page furniture.**
+  A wait loop keyed on `/kcal from/` broke instantly on "kcal from exercise
+  today" in the Active burn tile, reported the meal form as hung, and cost
+  three runs and an instrumented build before the *test* turned out to be the
+  bug — the app had been returning in three seconds throughout. Poll the one
+  element that holds the answer (`form p[role="status"]`), not the document.
 - `document.querySelector("svg")` finds the glass filter's `<svg>`, not the
   chart. Scope to the chart's section.
 - Clicking immediately after a redirect can beat hydration; the click is

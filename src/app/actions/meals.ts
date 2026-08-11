@@ -117,11 +117,14 @@ export async function saveMealAction(
       if (items.length === 0) {
         return {
           ok: false,
-          error:
-            aiNote ??
-            (photo
-              ? "Could not find any food in that photo."
-              : "Could not identify any food in that description."),
+          // A picture gets the flat answer, never the model's commentary on
+          // what it saw instead. It read "a login screen for a health log
+          // application, not any food items" back to somebody once — accurate,
+          // faintly unnerving, and no help at all. What the person needs to
+          // know is that nothing was logged and why.
+          error: photo
+            ? "No food detected."
+            : (aiNote ?? "Could not identify any food in that description."),
         };
       }
       // A photo with nothing typed leaves the meal with no words of its own, so
