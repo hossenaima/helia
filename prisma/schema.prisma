@@ -136,9 +136,9 @@ model WeightEntry {
 
   /// Where this reading came from, which is what makes a streak mean anything.
   ///
-  /// - `live`     — logged on the day it is for
+  /// - `live`     — logged on the day it is for, or the day after
   /// - `health`   — came out of an Apple Health export
-  /// - `backfill` — typed into the calendar for a day already past
+  /// - `backfill` — typed in later than that
   ///
   /// Only `backfill` is excluded from streaks: a number typed in afterwards is
   /// unverifiable, and being able to type one is how a streak gets faked.

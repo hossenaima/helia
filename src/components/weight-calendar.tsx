@@ -8,7 +8,7 @@ import {
   monthLabel,
   shiftMonth,
 } from "@/lib/calendar";
-import { formatDayLong } from "@/lib/dates";
+import { addDays, formatDayLong } from "@/lib/dates";
 import { fromLbs, type Units } from "@/lib/units";
 import { saveWeightForDateAction } from "@/app/actions/weight";
 
@@ -212,6 +212,16 @@ export function WeightCalendar({
           {byDate.has(selected) && (
             <p className="mt-2 text-xs text-ink-muted">
               Clear the box and save to delete this weigh-in.
+            </p>
+          )}
+          {/* Said here, where it applies, rather than left to be discovered
+              when the streak does not move. A weigh-in typed in this late is
+              still kept and still drawn — it just is not evidence of the
+              morning it claims. */}
+          {selected < addDays(today, -1) && (
+            <p className="mt-2 text-xs text-ink-muted">
+              This day is past the streak cut-off — it is saved and charted, but
+              it will not add to your streak.
             </p>
           )}
           {error && (

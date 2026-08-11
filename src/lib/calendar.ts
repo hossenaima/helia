@@ -51,13 +51,32 @@ export type StreakEntry = { date: string; source: string };
 export type DayRange = { startDate: string; endDate: string };
 
 /**
+ * Where a reading being written *now* came from, for `WeightEntry.source`.
+ *
+ * **Today or yesterday is logged live.** Not getting round to typing this
+ * morning's number until tonight — or until tomorrow, before the day is
+ * properly behind you — is a lapse in logging, not a missed weigh-in, and a
+ * rule that cannot tell those apart records a consistent person as an absent
+ * one. One day is as far as that stretches: a grace wide enough to fill in a
+ * week is the backfill again under another name, and being able to repair the
+ * last few days at any time means a streak can never really break.
+ *
+ * Everything else is a `backfill` — including a *future* date, which the UI
+ * cannot produce but a forged POST could. Dating a weigh-in tomorrow would
+ * otherwise mint a live day out of nothing.
+ */
+export function sourceForDate(date: string, today: string): "live" | "backfill" {
+  return date === today || date === addDays(today, -1) ? "live" : "backfill";
+}
+
+/**
  * Whether a reading counts toward a streak.
  *
- * A weigh-in typed into the calendar for a day already past is unverifiable —
- * and typing a row of them was how a tester ran their streak up without
- * standing on a scale. Live readings and Apple Health imports count; a
- * backfill is still your data and still draws on the chart, it just does not
- * buy a day of attendance.
+ * A weigh-in typed in days after the morning it claims is unverifiable — and
+ * typing a row of them was how a tester ran their streak up without standing on
+ * a scale. Live readings and Apple Health imports count; a backfill is still
+ * your data and still draws on the chart, it just does not buy a day of
+ * attendance.
  */
 export function countsForStreak(entry: StreakEntry): boolean {
   return entry.source !== "backfill";
@@ -165,6 +184,15 @@ export function __checkStreak(): string {
     "frozen through today",
   );
   eq(weighInStreak([], [], T), { current: 0, best: 0 }, "empty");
+
+  // The grace day, and its edges.
+  eq(sourceForDate(T, T), "live", "today");
+  eq(sourceForDate("2026-08-10", T), "live", "yesterday, typed in today");
+  eq(sourceForDate("2026-08-09", T), "backfill", "two days late");
+  eq(sourceForDate("2026-08-12", T), "backfill", "a future date earns nothing");
+  // Month and year boundaries go through addDays, not string arithmetic.
+  eq(sourceForDate("2026-07-31", "2026-08-01"), "live", "across a month");
+  eq(sourceForDate("2025-12-31", "2026-01-01"), "live", "across a year");
 
   return "streak checks passed";
 }

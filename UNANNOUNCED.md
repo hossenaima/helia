@@ -36,11 +36,14 @@ node scripts/announce.mjs "…" "…" --send                                # to
   run. Frozen days hold your streak where it is rather than adding to it, and
   they have to be picked before you go — a freeze cannot cover a day already
   past. No morning reminder while you are frozen either.
-- **Streaks count days you actually logged.** Typing a weight into a past day on
-  the calendar no longer raises your streak. It is still your data and still
-  draws on the chart — it just is not proof you stood on a scale that morning.
-  Weigh-ins brought in from Apple Health do still count. **Some streaks will read
-  lower than they did**, which is the correction, not a bug.
+- **Streaks count days you actually logged — with a day's grace.** Log this
+  morning's weigh-in any time today or tomorrow and it counts. Fill in a day
+  older than that and it is saved and charted as always, but it no longer adds
+  to your streak: typing numbers into missed days was raising the count, and a
+  streak you can type in is not a streak. Weigh-ins brought in from Apple Health
+  still count. The calendar now tells you when a day you have tapped is past the
+  cut-off. **Some streaks will read lower than they did**, which is the
+  correction, not a bug.
 
 *As of 2026-08-10. All deployed and live.*
 

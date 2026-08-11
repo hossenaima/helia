@@ -248,8 +248,33 @@ number you type there is still your data and still belongs on the chart. It
 just cannot also be evidence that you turned up.
 
 `WeightEntry.source` records the provenance: `live` (logged on the day it is
-for), `health` (came out of an Apple Health export), `backfill` (typed in for a
-day already past). Only `backfill` is excluded. **Health imports still count**,
+for, or the day after), `health` (came out of an Apple Health export),
+`backfill` (typed in later than that). Only `backfill` is excluded.
+
+**There is one day of grace, and it was not in the first cut.** Logging is
+strict without it: a reading counted only if it arrived on its own day, which
+records somebody who weighed themselves and got round to typing it the next
+morning as having missed the day entirely. The owner asked whether Jerry — the
+tester whose streak the rule cut from 8 to 4 — had actually missed anything, and
+the record said no: eight consecutive dates, no gap, no app activity at all on
+the two days in question, and two entries typed a minute apart four days later.
+That is what forgetting looks like, and the strict rule cannot tell it from
+fabrication. **One day is the whole grace.** A window wide enough to fill in a
+week is the backfill again under another name, and one that always covers the
+last few days means a streak can never actually break — you would simply repair
+it whenever you noticed. Jerry's two were three and four days late, so this does
+not rescue them; that outcome was chosen with the numbers in front of the owner.
+
+`sourceForDate` also refuses a *future* date, which the UI cannot produce but a
+forged POST could. Dating a weigh-in tomorrow would otherwise mint a live day
+out of nothing.
+
+**The calendar says so where it applies.** Selecting a day older than the
+cut-off puts a line under the box: saved and charted, but it will not add to
+your streak. A rule you find out about by watching a number fail to move is a
+rule that reads as a bug.
+
+**Health imports still count**,
 which is why this is a column rather than the one-line `createdAt === date`
 comparison it looks like it should be: the owner's own history holds a real
 21-day run that arrived through the importer, and a rule keyed on timing alone

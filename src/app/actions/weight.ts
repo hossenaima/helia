@@ -5,22 +5,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { addDays, isDayKey, todayIn } from "@/lib/dates";
+import { sourceForDate } from "@/lib/calendar";
 import { toLbs } from "@/lib/units";
 
 export type ActionResult = { ok: boolean; error?: string; saved?: number };
 
-/**
- * Where a reading came from, decided from the date rather than from which form
- * posted it: `date` arrives in the request body, so a direct POST could claim
- * today's provenance for any day it liked.
- *
- * Only ever passed to a `create`. On an update the existing value stands — a
- * typo corrected tomorrow must not demote a day that was logged live, and no
- * amount of correcting can promote one that was typed in afterwards.
- */
-function sourceFor(date: string, timezone: string): "live" | "backfill" {
-  return date === todayIn(timezone) ? "live" : "backfill";
-}
 
 // Sanity bounds in pounds. Catches a kg/lb mix-up or a slipped decimal point
 // before it lands in the chart and skews every axis.
@@ -67,7 +56,7 @@ export async function saveWeightAction(
       date: parsed.data.date,
       weightLbs,
       note,
-      source: sourceFor(parsed.data.date, user.timezone),
+      source: sourceForDate(parsed.data.date, todayIn(user.timezone)),
     },
   });
 
@@ -113,7 +102,7 @@ export async function saveWeightForDateAction(input: {
       userId: user.id,
       date: input.date,
       weightLbs,
-      source: sourceFor(input.date, user.timezone),
+      source: sourceForDate(input.date, todayIn(user.timezone)),
     },
   });
 
