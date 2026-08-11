@@ -45,6 +45,9 @@ type Dish = {
   id: string;
   kcal: number;
   massG: number;
+  fatG: number;
+  carbG: number;
+  proteinG: number;
   ingredients: Array<{ name: string; grams: number }>;
 };
 
@@ -72,6 +75,9 @@ function parseDishes(csv: string): Dish[] {
       id: c[0],
       kcal: Number(c[1]),
       massG: Number(c[2]),
+      fatG: Number(c[3]),
+      carbG: Number(c[4]),
+      proteinG: Number(c[5]),
       ingredients,
     });
   }
@@ -110,7 +116,15 @@ console.log(
 );
 
 const estimator = getEstimator();
-const rows: Array<{ id: string; truth: number; got: number; items: number }> = [];
+type Row = {
+  id: string;
+  truth: number;
+  got: number;
+  items: number;
+  fatTruth: number;
+  fatGot: number;
+};
+const rows: Row[] = [];
 
 for (const dish of sample) {
   const png = await cached(
@@ -130,11 +144,20 @@ for (const dish of sample) {
       photo: { data: new Uint8Array(png), mimeType: "image/png" },
     });
     const got = result.items.reduce((sum, i) => sum + i.calories, 0);
-    rows.push({ id: dish.id, truth: dish.kcal, got, items: result.items.length });
+    const fatGot = result.items.reduce((sum, i) => sum + (i.fatG ?? 0), 0);
+    rows.push({
+      id: dish.id,
+      truth: dish.kcal,
+      got,
+      items: result.items.length,
+      fatTruth: dish.fatG,
+      fatGot,
+    });
     const err = ((got - dish.kcal) / dish.kcal) * 100;
     console.log(
       `  ${dish.id.replace("dish_", "")}  truth ${dish.kcal.toFixed(0).padStart(4)}  ` +
         `got ${String(got).padStart(4)}  ${err >= 0 ? "+" : ""}${err.toFixed(0)}%  ` +
+        `fat ${dish.fatG.toFixed(0)}→${fatGot.toFixed(0)}g  ` +
         `${result.items.length} items  (${words})`,
     );
   } catch (error) {
@@ -156,3 +179,16 @@ console.log(`  within 50%        ${pct(rows.filter((_, i) => errs[i] <= 0.5).len
 // Bias matters more than spread for a food log: a number that is wrong at
 // random averages out over a week, one that is always high does not.
 console.log(`  bias (signed)     ${signed.length ? (mean(signed) >= 0 ? "+" : "") + pct(mean(signed)) : "—"}`);
+
+// Fat is the macro the market gets wrong: a 2026 metabolic-kitchen study found
+// four commercial apps under-counting it by ~30g a meal. The prompt tells this
+// one to add fat only where it can see it, which is exactly the instruction
+// that could recreate that, so it is measured rather than assumed.
+const fatRows = rows.filter((r) => r.fatTruth > 1);
+const fatErr = fatRows.map((r) => Math.abs(r.fatGot - r.fatTruth) / r.fatTruth);
+const fatSigned = fatRows.map((r) => (r.fatGot - r.fatTruth) / r.fatTruth);
+const fatGrams = mean(fatRows.map((r) => r.fatGot - r.fatTruth));
+console.log(`\n  fat: dishes       ${fatRows.length}`);
+console.log(`  fat: mean abs     ${pct(mean(fatErr))}`);
+console.log(`  fat: bias         ${(mean(fatSigned) >= 0 ? "+" : "") + pct(mean(fatSigned))}` +
+  `  (${fatGrams >= 0 ? "+" : ""}${fatGrams.toFixed(0)}g a meal)`);

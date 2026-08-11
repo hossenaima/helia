@@ -467,6 +467,38 @@ On the untouched prompt, adding three words naming the food took mean error 73%
 → 55% and bias +59% → +39%. That is the strongest evidence for keeping the
 description box next to the camera rather than replacing it.
 
+**Fat is over-counted too, but not by much in grams: 79% mean error, +58%
+bias, +4g a meal.** Worth measuring rather than assuming, because the prompt
+line "add fat only where you can see it" is exactly the instruction that could
+have recreated the market's known failure — a 2026 metabolic-kitchen study found
+four commercial apps under-counting fat by about 30g a meal. It did not; this
+one still leans rich. The small gram figure is a property of the dataset, whose
+cafeteria plates are lean, not evidence about a fried dinner.
+
+**A USDA FoodData Central lookup was investigated and rejected — it addresses
+the wrong error.** The idea was to stop the model doing nutrition arithmetic
+from memory: have it name the food and the grams, then take calories per 100g
+from a real table. Two measurements killed it.
+
+First, the model's density recall is already good: asked for kcal per 100g
+across fifteen common foods it averaged **14% absolute error against USDA, and
+roughly unbiased** (errors fell both ways). Total calorie error is +37% and
+systematically positive, so density is not where the error lives, and a lookup
+cannot correct a bias that is not in the number it replaces.
+
+Second, naive matching is actively dangerous. Taking USDA's top hit for a plain
+query gave "streaky bacon, cooked" → *Pork, bacon, rendered fat, cooked* at
+**898 kcal/100g**, against the model's far more sensible 480. "White rice,
+cooked" landed on glutinous rice. Three bad matches in ten queries, each of
+which would have replaced a decent estimate with a confident wrong one.
+
+The error is in portion and identity — reading a modest heap as a full serving,
+whole eggs for egg whites — which is perception, not arithmetic, and a table
+fixes neither. If this is ever revisited it needs curated queries, several
+candidates ranked against the model's own figure, and a sanity band; that is a
+lot of machinery for at most a slice of a 14% component. The free API also caps
+at 1,000 requests an hour and needs a key per deployment.
+
 **It is still biased high, and that is the thing to fix next.** A log that runs
 consistently over is worse than one that is noisily wrong, because the error
 does not average out across a week. Do not "fix" it with a correction factor
@@ -1245,6 +1277,10 @@ Duolingo, Apple Fitness), not yet implemented:
   learning a date format; tapping a day means the date is the thing you touch.
 - **A "what can I eat?" suggestion engine** — built, then removed as the least
   proven feature and the most machinery. In the commit history if wanted back.
+- **USDA FoodData Central for per-100g calories** — measured, not assumed: the
+  model's own density recall is 14% off and unbiased, while the error that
+  matters is +37% and one-directional, and USDA's top hit priced streaky bacon
+  as rendered pork fat. See *Reading a meal from a photograph*.
 
 ---
 
