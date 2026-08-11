@@ -357,6 +357,72 @@ the rounding drift on the largest item — **rounding each part independently
 leaves the total a few calories off the number somebody typed precisely to stop
 arguing about it.** Its `__checkScale()` covers the awkward divisions.
 
+### Reading a meal from a photograph
+
+**The photo goes through the same estimator, the same schema and the same
+editable items.** It is one extra part on the request and a block of prompt, not
+a second pipeline. That matters more than it sounds: everything that already
+makes an estimate arguable — the per-item `basis`, the editable calories, the
+macro rescaling, `scaleToTotal` — applies to a picture for free, and those are
+exactly what the photo apps on the market do not have.
+
+**The one thing a photograph cannot carry is scale, and that is the whole
+problem.** A plate of food has no size in a JPEG. Every competitor guesses
+silently and is confidently wrong, which is unfixable by the person holding the
+phone because nothing says which part of the number is off. So the prompt makes
+the model name the reference it measured against — "plate reads as ~27 cm; two
+sausages about 12 cm long, so 60 g each" — and that sentence lands in `basis`
+under the item, where it can be disagreed with. **An estimate you can argue with
+beats a better one you cannot.**
+
+**The person's words beat the picture.** "I only ate half the plate and left both
+bread rolls" took the same photo from 1,314 kcal over 8 items to 635 over 7,
+with every `basis` explaining the halving. They were there and the model was
+not. This is also why the photo does not replace the description box — the two
+together are stronger than either, and no competitor takes both.
+
+**A typed total still wins over a photograph**, by the same `scaleToTotal` the
+text path uses: a menu that says 500 kcal beats any number read off a picture,
+and the model's split is kept. Verified: 8 items summing to exactly 500.
+
+**The photo is downscaled in the browser and never stored.** 1024px on the
+longest edge, JPEG q0.75 — the model tiles at 768px, so more resolution buys
+nothing. On the test photo that is 1280×1280 → 206KB, which also keeps the post
+under the 1MB a server action accepts by default, so no limit anywhere had to be
+raised. It cut the round trip from **18.4s to 8.5s**, which is the difference
+between usable and not. Same reasoning as parsing an Apple Health export in the
+browser.
+
+Not storing it is a real decision, not an omission. Storing photos of what
+people eat means a bucket, signed URLs, a deletion path that has to keep step
+with account deletion, and a new privacy surface right next to the per-friend
+food-sharing rules. The estimate is what has value; the picture was the input.
+**What it costs:** you cannot look back at what the estimate was based on. If
+that turns out to matter, the upgrade is Supabase Storage with the same
+`onDelete: Cascade` discipline as every other table.
+
+**The file input has no `capture` attribute.** With one, iOS opens the camera
+and takes the photo library away. Without it the phone offers both, which is
+what "take a photo or choose one" actually needs.
+
+**`imageOrientation: "from-image"` is named explicitly** when decoding. A
+portrait photo carries its rotation in EXIF, and a canvas that ignores it
+uploads the meal lying on its side.
+
+**Items get `source: "photo"`, not `"ai"`.** Same estimator, but where a figure
+came from is worth keeping — the same reasoning as `WeightEntry.source`. It is
+what lets the card say "read from your photo" instead of "from your
+description", and it will be what answers "are photo estimates any good?" later.
+
+**A photo with no words writes its own description**, from the item names the
+model returned. Otherwise the card, the reuse list and the digest would all show
+a meal with nothing written on it.
+
+**`maxOutputTokens` is 8192 on the photo path, against 4096 for text.** On
+2.5-flash the thinking tokens come out of the same budget as the reply, and an
+image costs a lot of them before a single item is written — too small a budget
+returns *no text at all* rather than a shorter answer.
+
 **A typed number is `exact` wherever it is typed**, on the manual path too. It
 was `estimated` there, which drew a ± band around a figure read off a packet.
 
@@ -872,6 +938,13 @@ Grouped by where they bite.
   silently never working.
 - **Backticks inside a backtick-delimited prompt** break the template literal.
   Use double quotes when naming a field in prompt text.
+- **A script that imports `src/lib/ai/*` needs the `react-server` condition.**
+  `import "server-only"` resolves to the throwing entry point otherwise, and
+  the script dies with *"This module cannot be imported from a Client
+  Component"* before it reaches any code of yours. Run it as
+  `NODE_OPTIONS="--conditions=react-server" npx tsx scripts/whatever.mts`.
+  This is how the photo prompt was iterated on without going through the UI —
+  worth an hour to know.
 
 ### Push notifications
 

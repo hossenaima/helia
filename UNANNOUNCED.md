@@ -27,6 +27,17 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 *As of 2026-08-11. All deployed and live.*
 
+- **Photograph your meal and Helia will read it.** On the Meals tab, tap *+
+  Photo of the meal* — take one or pick one from your library — and press *Read
+  the photo*. It comes back with each thing on the plate as its own line, the
+  portion it judged, and how it judged it: "plate reads as ~27 cm; two sausages
+  about 12 cm long, so 60 g each". Every line is editable, because a photo
+  cannot show a portion exactly and the point is that you can see where a number
+  came from and argue with it. Three things worth knowing: **your words beat the
+  picture** — add "I left half of it" and it prices what you ate, not what was
+  served; **a calorie total you type still wins**, with the photo estimate split
+  to add up to it; and **the photo is not stored** — it is sent to the model to
+  be identified and Helia keeps only the result.
 - **Nothing to delete by accident.** The little × at the end of every row of the
   weight log is gone. A tester deleted a weigh-in with it by mistake, and the
   only way back is another trip to the scale. To remove or fix a day, tap it on

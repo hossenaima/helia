@@ -1,7 +1,12 @@
 import "server-only";
 
 import { z } from "zod";
-import { AiUnavailableError, aiAvailable, generateJson } from "@/lib/ai/gemini";
+import {
+  AiUnavailableError,
+  aiAvailable,
+  generateJson,
+  type ImagePart,
+} from "@/lib/ai/gemini";
 
 /**
  * Calorie estimation lives behind this interface so the rest of the app never
@@ -60,9 +65,16 @@ export type EstimateResult = {
   note?: string;
 };
 
+export type EstimateInput = {
+  /** What the person typed. May be empty when there is a photo. */
+  description: string;
+  /** A picture of the meal, already downscaled by the browser. */
+  photo?: ImagePart;
+};
+
 export interface CalorieEstimator {
   readonly available: boolean;
-  estimate(description: string): Promise<EstimateResult>;
+  estimate(input: EstimateInput): Promise<EstimateResult>;
 }
 
 /** Re-exported so callers keep one error type to catch. */
@@ -105,14 +117,65 @@ macros in grams, sodium in milligrams. Never invent food the person did not
 mention. If the text describes no food at all, return an empty items list and
 explain why in the note.`;
 
+/**
+ * Added when there is a picture.
+ *
+ * The one thing a photograph cannot carry is scale, and guessing at it silently
+ * is the failure every photo calorie app is known for: a confident number with
+ * no way to tell which part of it is wrong. So the rules below force the
+ * portion reasoning out into the open — judged against something in the frame
+ * whose real size is known, and written into `basis` where the person can
+ * disagree with it. An estimate you can argue with beats a better one you
+ * cannot.
+ */
+const PHOTO_PROMPT = `A photograph of the meal comes first, before any text.
+
+Work from what is actually visible. Name every distinct component as its own
+item — the sausage, the beans, the bread, the sauce in the little pot — because
+those are the things a person can tell you they did not finish. Do not collapse
+the plate into one "cooked breakfast" line.
+
+Judge portions against something in the frame whose real size you know: a dinner
+plate is 26–28 cm across, a side plate 18–20 cm, a fork about 18 cm, a standard
+mug holds around 300 ml, a slice of sandwich bread is about 11 cm square. Name
+the reference you used in "basis", with the portion you concluded — for example
+"plate reads as ~27 cm; beans fill a 9 cm pot about 2 cm deep, so roughly 150 g".
+If there is nothing in the frame to judge scale by, say that in "basis" and
+assume a normal restaurant serving.
+
+Count what the picture shows and cannot show. Include the fat a dish was plainly
+cooked in, visible sauce, dressing and butter. Say in the note when something
+significant is hidden — dressing under a salad, oil absorbed by fried food, what
+might be beneath what is on top.
+
+If the photo shows a nutrition label, a packet or a menu board, read the figures
+off it and use those. Only then set precision to "exact", and say in "basis"
+that the number was read rather than estimated.
+
+Where the person's own words and the picture disagree, follow the words. They
+were there and you were not: if they say half of it was left, or that the mug is
+a large one, price what they said.
+
+If the picture contains no food at all, return an empty items list and say what
+you can see instead.`;
+
 class GeminiEstimator implements CalorieEstimator {
   readonly available = true;
 
-  async estimate(description: string): Promise<EstimateResult> {
+  async estimate({ description, photo }: EstimateInput): Promise<EstimateResult> {
     const parsed = await generateJson({
       schema: estimateSchema,
-      system: SYSTEM_PROMPT,
-      prompt: description,
+      system: photo ? `${SYSTEM_PROMPT}\n\n${PHOTO_PROMPT}` : SYSTEM_PROMPT,
+      prompt:
+        description ||
+        // The parts array still needs text after the image, and an empty string
+        // is not a prompt. This says out loud that there is nothing to add.
+        "No description was given. Work from the photograph alone.",
+      image: photo,
+      // A picture costs thinking tokens before a single item is written, and on
+      // 2.5-flash those come out of the same budget as the reply — too small a
+      // budget returns no text at all rather than a short answer.
+      maxOutputTokens: photo ? 8192 : 4096,
     });
 
     return {

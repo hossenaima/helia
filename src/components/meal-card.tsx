@@ -59,7 +59,10 @@ export function MealCard({
   const precision = mealPrecision(meal);
   const band = estimateBand(n.calories);
   const hasCalories = meal.items.some((i) => i.calories !== null);
-  const estimated = meal.items.some((i) => i.source === "ai");
+  const estimated = meal.items.some(
+    (i) => i.source === "ai" || i.source === "photo",
+  );
+  const fromPhoto = meal.items.some((i) => i.source === "photo");
 
   // A hand-typed meal stores one item named after the note, so listing it would
   // just repeat the line above.
@@ -190,7 +193,9 @@ export function MealCard({
 
               {estimated && (
                 <p className="mt-3 text-xs text-ink-muted">
-                  Estimated from your description. Numbers off? Correct them.
+                  {fromPhoto
+                    ? "Read from your photo. A picture cannot show a portion exactly — the working is under each line, so correct anything that looks wrong."
+                    : "Estimated from your description. Numbers off? Correct them."}
                 </p>
               )}
 

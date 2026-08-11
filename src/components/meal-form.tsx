@@ -1,10 +1,47 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { saveMealAction, type MealActionResult } from "@/app/actions/meals";
 import { suggestMealName } from "@/lib/meals";
 
 const INITIAL: MealActionResult = { ok: false };
+
+/**
+ * Longest edge of the picture that gets uploaded.
+ *
+ * The model tiles an image at 768px, so detail beyond about a thousand pixels
+ * buys nothing and costs the person on mobile data a wait every time they log
+ * lunch. A 12 megapixel phone photo is ~4MB and would also blow the 1MB body a
+ * server action accepts by default; downscaling first means no limit anywhere
+ * has to be raised.
+ */
+const MAX_EDGE = 1024;
+const JPEG_QUALITY = 0.75;
+
+/**
+ * Decode, rotate, shrink, re-encode — all before anything leaves the phone.
+ *
+ * `imageOrientation: "from-image"` is named rather than left to default: a
+ * photo taken in portrait carries its rotation in EXIF, and a canvas that
+ * ignores that uploads a meal lying on its side.
+ */
+async function downscale(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no 2d context");
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY),
+  );
+  if (!blob) throw new Error("could not encode");
+  return blob;
+}
 
 export function MealForm({
   date,
@@ -24,12 +61,41 @@ export function MealForm({
   // state flag set in onClick would race the submission.
   const [pendingAi, setPendingAi] = useState(false);
 
+  // Shrunk at the moment it is chosen rather than on submit, so the wait
+  // happens while the person is still typing and `action` stays synchronous.
+  const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  function clearPhoto() {
+    if (photo) URL.revokeObjectURL(photo.url);
+    setPhoto(null);
+    setPhotoError(null);
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  async function choosePhoto(file: File | undefined) {
+    if (!file) return;
+    setPhotoError(null);
+    try {
+      const blob = await downscale(file);
+      if (photo) URL.revokeObjectURL(photo.url);
+      setPhoto({ blob, url: URL.createObjectURL(blob) });
+    } catch {
+      setPhotoError("That image could not be read. Try a photo from the camera.");
+    }
+  }
+
   return (
     <form
       action={(formData) => {
+        // The <input type="file"> is not in the form: what gets sent is the
+        // downscaled copy, under the same name the action reads.
+        if (photo) formData.set("photo", photo.blob, "meal.jpg");
         formAction(formData);
         setNote("");
         setName(suggestMealName(new Date().getHours()));
+        clearPhoto();
       }}
       className="card mt-4 p-5"
     >
@@ -68,6 +134,54 @@ export function MealForm({
         "
       />
 
+      {/* No `capture` attribute on purpose: with it, iOS opens the camera and
+          takes the photo library away. Without it the phone offers both. */}
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(e) => choosePhoto(e.target.files?.[0])}
+      />
+
+      {photo ? (
+        <div className="mt-3 flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a blob URL
+              from this device; next/image is for optimising remote assets. */}
+          <img
+            src={photo.url}
+            alt="The meal you are about to log"
+            className="size-16 shrink-0 rounded-lg object-cover"
+          />
+          <p className="min-w-0 flex-1 text-xs text-ink-muted">
+            Read when you tap estimate. Sent to the model to be identified, and
+            not stored by Helia.
+          </p>
+          <button
+            type="button"
+            onClick={clearPhoto}
+            className="eyebrow shrink-0 transition-colors hover:!text-up"
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          disabled={!aiEnabled}
+          className="eyebrow mt-3 transition-colors hover:!text-ink"
+        >
+          + Photo of the meal
+        </button>
+      )}
+
+      {photoError && (
+        <p role="alert" className="mt-2 text-xs text-up">
+          {photoError}
+        </p>
+      )}
+
       <div className="mt-4 flex flex-wrap items-end gap-x-5 gap-y-3">
         <div>
           <label htmlFor="calories" className="eyebrow block">
@@ -91,7 +205,8 @@ export function MealForm({
             typed total is kept and the estimate is scaled to match it. Nothing
             in the layout said so. */}
         <p className="w-full order-last text-xs text-ink-muted">
-          Know the total? Type it — an estimate will be split to add up to it.
+          Know the total? Type it — an estimate will be split to add up to it,
+          from a photo as well as from words.
         </p>
 
         <button
@@ -131,8 +246,13 @@ export function MealForm({
           name="estimate"
           value="1"
           onClick={() => setPendingAi(true)}
+          // A photo is a description too, so this is the one path that does not
+          // need words.
           disabled={
-            pending || note.trim() === "" || name.trim() === "" || !aiEnabled
+            pending ||
+            (note.trim() === "" && !photo) ||
+            name.trim() === "" ||
+            !aiEnabled
           }
           title={
             aiEnabled
@@ -141,7 +261,13 @@ export function MealForm({
           }
           className="btn btn-primary flex-1"
         >
-          {pending && pendingAi ? "Estimating" : "Estimate for me"}
+          {pending && pendingAi
+            ? photo
+              ? "Reading the photo"
+              : "Estimating"
+            : photo
+              ? "Read the photo"
+              : "Estimate for me"}
         </button>
       </div>
 

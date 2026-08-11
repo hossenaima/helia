@@ -21,15 +21,20 @@ export function aiAvailable(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
+/** A picture to read alongside the prompt. Raw bytes, never a URL. */
+export type ImagePart = { data: Uint8Array; mimeType: string };
+
 export async function generateJson<T extends z.ZodType>({
   schema,
   system,
   prompt,
+  image,
   maxOutputTokens = 4096,
 }: {
   schema: T;
   system: string;
   prompt: string;
+  image?: ImagePart;
   maxOutputTokens?: number;
 }): Promise<z.infer<T>> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -43,7 +48,24 @@ export async function generateJson<T extends z.ZodType>({
 
   const response = await ai.models.generateContent({
     model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
-    contents: prompt,
+    // The image goes first: the model reads parts in order, and the text that
+    // follows is about the picture rather than the other way round.
+    contents: image
+      ? [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: image.mimeType,
+                  data: Buffer.from(image.data).toString("base64"),
+                },
+              },
+              { text: prompt },
+            ],
+          },
+        ]
+      : prompt,
     config: {
       systemInstruction: system,
       // Constrains the decoder to the schema, so the reply is parseable by

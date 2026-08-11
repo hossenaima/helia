@@ -21,8 +21,35 @@ export type MealActionResult = {
 const mealSchema = z.object({
   date: z.string().refine(isDayKey, "Not a valid date."),
   name: z.string().trim().min(1, "Give the meal a name.").max(60),
-  note: z.string().trim().min(1, "Describe what you ate.").max(2000),
+  // Not required on its own any more: a photograph is also a description of
+  // what you ate. Which of the two has to be present is decided below, because
+  // it depends on whether the estimator is being asked.
+  note: z.string().trim().max(2000),
 });
+
+/**
+ * Photographs the browser has already downscaled. The cap is a backstop against
+ * a hand-rolled POST, not something the form can hit: it sends a JPEG about
+ * 1024px on its longest edge, which lands well under 300KB.
+ */
+const MAX_PHOTO_BYTES = 4_000_000;
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+async function readPhoto(
+  value: FormDataEntryValue | null,
+): Promise<{ data: Uint8Array; mimeType: string } | null | { error: string }> {
+  if (!(value instanceof File) || value.size === 0) return null;
+  if (!PHOTO_TYPES.includes(value.type)) {
+    return { error: "That photo is in a format Helia cannot read." };
+  }
+  if (value.size > MAX_PHOTO_BYTES) {
+    return { error: "That photo is too large." };
+  }
+  return {
+    data: new Uint8Array(await value.arrayBuffer()),
+    mimeType: value.type,
+  };
+}
 
 /**
  * Saves a meal. A day holds as many meals as the user logs — there is no fixed
@@ -44,9 +71,27 @@ export async function saveMealAction(
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
-  const { date, name, note } = parsed.data;
+  const { date, name } = parsed.data;
+  let { note } = parsed.data;
   const useAi = formData.get("estimate") === "1";
   const manualCalories = formData.get("calories");
+
+  const photoResult = await readPhoto(formData.get("photo"));
+  if (photoResult && "error" in photoResult) {
+    return { ok: false, error: photoResult.error };
+  }
+  const photo = photoResult;
+
+  // A photo is a description; without the estimator it is neither, since
+  // nothing would read it and the meal would have no name for its one item.
+  if (note === "" && !(useAi && photo)) {
+    return {
+      ok: false,
+      error: useAi
+        ? "Describe what you ate, or add a photo."
+        : "Describe what you ate.",
+    };
+  }
 
   const typedRaw = String(manualCalories ?? "").trim();
   let typedCalories: number | null = null;
@@ -63,14 +108,30 @@ export async function saveMealAction(
 
   if (useAi) {
     try {
-      const result = await getEstimator().estimate(note);
+      const result = await getEstimator().estimate({
+        description: note,
+        photo: photo ?? undefined,
+      });
       items = result.items;
       aiNote = result.note;
       if (items.length === 0) {
         return {
           ok: false,
-          error: aiNote ?? "Could not identify any food in that description.",
+          error:
+            aiNote ??
+            (photo
+              ? "Could not find any food in that photo."
+              : "Could not identify any food in that description."),
         };
+      }
+      // A photo with nothing typed leaves the meal with no words of its own, so
+      // what the model saw becomes the description. Otherwise the card, the
+      // reuse list and the digest would all show a nameless meal.
+      if (note === "") {
+        note = items
+          .map((item) => item.name)
+          .join(", ")
+          .slice(0, 2000);
       }
     } catch (error) {
       if (error instanceof EstimatorUnavailableError) {
@@ -131,7 +192,10 @@ export async function saveMealAction(
           fiberG: item.fiberG,
           sodiumMg: item.sodiumMg,
           precision: item.precision,
-          source: useAi ? "ai" : "manual",
+          // "photo" rather than "ai" when a picture was read: same estimator,
+          // but where the figure came from is worth keeping, the same way a
+          // weigh-in records whether anybody watched it happen.
+          source: useAi ? (photo ? "photo" : "ai") : "manual",
         })),
       },
     },
