@@ -136,6 +136,7 @@ src/proxy.ts            optimistic auth gate + static-asset exemptions
 prisma/migrations/      incremental, never reset — production data lives here
 scripts/reset-password.mjs  the only credential recovery path
 scripts/announce.mjs    push + email blast; dry run unless --send
+scripts/eval-photo.mts  measures the photo estimator against weighed food
 UNANNOUNCED.md          user-facing changes not yet emailed to testers
 ```
 
@@ -425,6 +426,58 @@ description", and it will be what answers "are photo estimates any good?" later.
 **A photo with no words writes its own description**, from the item names the
 model returned. Otherwise the card, the reuse list and the digest would all show
 a meal with nothing written on it.
+
+**How wrong it is, measured — `scripts/eval-photo.mts`.** Prompt work on an
+estimator is unfalsifiable without ground truth, and inventing reference numbers
+only measures whether the model agrees with whoever invented them. The harness
+runs against **Nutrition5k**, Google Research's public set of cafeteria plates
+where every ingredient was weighed on a scale before the photo was taken. It is
+a public GCS bucket, needs no credentials, and nothing lands in the repo — the
+images and metadata cache under the temp directory. Dish selection is a seeded
+shuffle fixed before any result is seen, so a prompt change is measured against
+the same food rather than a fresh sample.
+
+**What it measures and what it does not.** Those are overhead shots from a fixed
+lab camera of a plate on a plain sheet. A phone photo has a side angle, worse
+light and more clutter. Treat the figure as portion judgement under laboratory
+conditions, not as what a tester will get.
+
+**The first honest run said 73% mean error, and it was biased +59% high.** Two
+failures caused most of it, both visible by opening the worst images:
+
+1. **A modest heap on a large plate was rounded up to a restaurant portion.**
+   The prompt named plate diameters as the scale reference, and the model used
+   the plate rather than the food.
+2. **It assumed the richer preparation every time** — whole eggs where the truth
+   was egg whites, frying oil where the food had been baked dry.
+
+The fix was to make it weigh before it counts: state grams per component first,
+then cross-check that weight against what a serving of that food usually weighs,
+and **add fat only where it is visible**. Photo-only error went 73% → 55% mean,
+37% → 32% median, bias +59% → +37% on the same 15 dishes.
+
+**Confirmed on a wider sample: 53% mean, 36% median, 39% within a quarter of
+truth, bias +37%** (28 dishes returned an estimate out of 30 asked for; two
+failed outright, cause not chased). The 15-dish figures were not a fluke of the
+sample, and the median well below the mean is the shape to expect — most dishes
+land within a third, and a couple are wrong by multiples.
+
+**A short description from the person is worth about as much as the prompt fix.**
+On the untouched prompt, adding three words naming the food took mean error 73%
+→ 55% and bias +59% → +39%. That is the strongest evidence for keeping the
+description box next to the camera rather than replacing it.
+
+**It is still biased high, and that is the thing to fix next.** A log that runs
+consistently over is worse than one that is noisily wrong, because the error
+does not average out across a week. Do not "fix" it with a correction factor
+tuned on 15 lab photos — that buys a better number here and lies everywhere
+else.
+
+**`ESTIMATE_RANGE` is 0.15 and was never measured.** The ± band on a meal card
+comes from that constant, which predates any of this. The measurement above says
+a photo estimate is wider and skewed, but it says so about overhead lab shots,
+which is not enough to re-cut a number the whole app shows. Worth revisiting
+with phone photos of weighed food.
 
 **`maxOutputTokens` is 8192 on the photo path, against 4096 for text.** On
 2.5-flash the thinking tokens come out of the same budget as the reply, and an

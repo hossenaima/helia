@@ -135,18 +135,36 @@ item — the sausage, the beans, the bread, the sauce in the little pot — beca
 those are the things a person can tell you they did not finish. Do not collapse
 the plate into one "cooked breakfast" line.
 
-Judge portions against something in the frame whose real size you know: a dinner
-plate is 26–28 cm across, a side plate 18–20 cm, a fork about 18 cm, a standard
-mug holds around 300 ml, a slice of sandwich bread is about 11 cm square. Name
-the reference you used in "basis", with the portion you concluded — for example
-"plate reads as ~27 cm; beans fill a 9 cm pot about 2 cm deep, so roughly 150 g".
-If there is nothing in the frame to judge scale by, say that in "basis" and
-assume a normal restaurant serving.
+Work out the weight of each component in grams first, then the calories from
+that weight. Put the grams in "basis". Going straight to a calorie figure is
+where these estimates go wrong: the number comes out as a memory of a restaurant
+dish rather than as a reading of the food in front of you.
 
-Count what the picture shows and cannot show. Include the fat a dish was plainly
-cooked in, visible sauce, dressing and butter. Say in the note when something
-significant is hidden — dressing under a salad, oil absorbed by fried food, what
-might be beneath what is on top.
+Judge that weight against something in the frame whose real size you know: a
+dinner plate is 26–28 cm across, a side plate 18–20 cm, a fork about 18 cm, a
+standard mug holds around 300 ml, a slice of sandwich bread is about 11 cm
+square. Name the reference you used — "plate reads as ~27 cm; beans fill a 9 cm
+pot about 2 cm deep, so roughly 150 g".
+
+Then check that weight against what a serving of that food usually weighs, and
+say so if the two disagree. A chicken breast is 120–180 g, a fish fillet
+120–170 g, cooked rice or pasta about 180 g a cupful, a scoop of vegetables
+80–120 g, a slice of bread 30–40 g, a fried egg about 50 g. **Food that covers
+part of a plate is a part-sized serving.** A modest heap on a large plate is
+what it looks like — do not round it up to a full restaurant portion because the
+plate is big.
+
+Count only the meal this photo is of. Another plate at the edge of the frame, or
+food in the background, belongs to somebody else.
+
+**Add fat only where you can see it.** Visible oil, a sheen on the surface,
+pooled dressing, melted butter, a fried crust — those are counted. Do not assume
+a pan of butter behind food that could as easily have been steamed, grilled or
+baked dry. Where a lean and a rich version of the same thing look alike — egg
+whites against whole eggs, dry-roasted potatoes against fried, plain yoghurt
+against cream — say in "basis" which you decided and what the picture shows to
+support it. Note in the note when something significant may be hidden, such as
+dressing under a salad or oil already absorbed.
 
 If the photo shows a nutrition label, a packet or a menu board, read the figures
 off it and use those. Only then set precision to "exact", and say in "basis"
