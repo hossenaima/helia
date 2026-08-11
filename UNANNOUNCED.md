@@ -27,9 +27,8 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 *As of 2026-08-11. All deployed and live.*
 
-- **Photograph your meal and Helia will read it.** On the Meals tab, tap *+
-  Photo of the meal* — take one or pick one from your library — and press *Read
-  the photo*. It comes back with each thing on the plate as its own line, the
+- **Photograph your meal and Helia will read it.** On the Meals tab, tap **Take or choose a
+  photo** — the button under "What you ate" — and press *Read the photo*. It comes back with each thing on the plate as its own line, the
   portion it judged, and how it judged it: "plate reads as ~27 cm; two sausages
   about 12 cm long, so 60 g each". Every line is editable, because a photo
   cannot show a portion exactly and the point is that you can see where a number

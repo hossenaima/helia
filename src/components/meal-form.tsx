@@ -166,13 +166,30 @@ export function MealForm({
           </button>
         </div>
       ) : (
+        /* A real button, full width. This shipped as a line of 12px muted text
+           beside "+ Macros" — which is a disclosure toggle for a rarely-used
+           field — and the owner could not find it on the deployed site at all.
+           The most capable thing the app does was styled as a footnote. */
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
           disabled={!aiEnabled}
-          className="eyebrow mt-3 transition-colors hover:!text-ink"
+          className="btn btn-quiet mt-3 w-full"
         >
-          + Photo of the meal
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-4 shrink-0"
+          >
+            <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" />
+            <circle cx="12" cy="13" r="3.4" />
+          </svg>
+          Take or choose a photo
         </button>
       )}
 
