@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { dayKeyIn, isValidTimezone, todayIn } from "@/lib/dates";
+import { addDays, dayKeyIn, isValidTimezone, todayIn } from "@/lib/dates";
 import { pushToUser } from "@/lib/push";
 import { noteCutoff } from "@/lib/friends";
-import { weighInStreak } from "@/lib/calendar";
+import { frozenDays, weighInStreak } from "@/lib/calendar";
 
 /**
  * Reminder sweep. Meant to be called every hour — see `.github/workflows` —
@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
   let notified = 0;
   let skippedAlreadyLogged = 0;
   let skippedAlreadySent = 0;
+  let skippedFrozen = 0;
 
   for (const user of candidates) {
     const zone = isValidTimezone(user.timezone) ? user.timezone : "UTC";
@@ -67,21 +68,31 @@ export async function GET(request: NextRequest) {
     // Recent days rather than just today's row: the same read answers "have
     // they logged?" and "what is their streak?", and the reminder is worth more
     // when it can say what is actually at stake.
-    const recent = await prisma.weightEntry.findMany({
-      where: { userId: user.id },
-      orderBy: { date: "desc" },
-      take: 60,
-      select: { date: true },
-    });
+    const [recent, freezes] = await Promise.all([
+      prisma.weightEntry.findMany({
+        where: { userId: user.id },
+        orderBy: { date: "desc" },
+        take: 60,
+        select: { date: true, source: true },
+      }),
+      prisma.streakFreeze.findMany({
+        where: { userId: user.id, endDate: { gte: addDays(today, -60) } },
+        select: { startDate: true, endDate: true },
+      }),
+    ]);
     if (recent.some((r) => r.date === today)) {
       skippedAlreadyLogged++;
       continue;
     }
+    // Someone who told us they are away does not need to be told they missed a
+    // day. Deliberately before `lastRemindedOn` is written, so nothing about
+    // the freeze changes what happens the morning they are back.
+    if (frozenDays(freezes).has(today)) {
+      skippedFrozen++;
+      continue;
+    }
 
-    const streak = weighInStreak(
-      recent.map((r) => r.date),
-      today,
-    ).current;
+    const streak = weighInStreak(recent, freezes, today).current;
 
     const result = await pushToUser(user.id, {
       title: "Morning weigh-in",
@@ -111,6 +122,7 @@ export async function GET(request: NextRequest) {
     notified,
     skippedAlreadyLogged,
     skippedAlreadySent,
+    skippedFrozen,
     notesPurged,
     at: todayIn("UTC"),
   });

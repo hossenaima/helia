@@ -111,6 +111,7 @@ model User {
   lastRemindedOn String?
 
   weightEntries WeightEntry[]
+  streakFreezes StreakFreeze[]
   meals         Meal[]
   dayLogs       DayLog[]
   sentRequests     Friendship[] @relation("requester")
@@ -133,11 +134,45 @@ model WeightEntry {
   weightLbs Float
   note      String?
 
+  /// Where this reading came from, which is what makes a streak mean anything.
+  ///
+  /// - `live`     — logged on the day it is for
+  /// - `health`   — came out of an Apple Health export
+  /// - `backfill` — typed into the calendar for a day already past
+  ///
+  /// Only `backfill` is excluded from streaks: a number typed in afterwards is
+  /// unverifiable, and being able to type one is how a streak gets faked.
+  /// **Set on create only, never on update** — correcting today's figure
+  /// tomorrow must not demote a day that really was logged live, and no
+  /// correction can promote one that was not.
+  source String @default("live")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, date])
   @@index([userId, date])
+}
+
+/// A stretch of days the user declared they would be away, so a missing
+/// weigh-in does not break their streak.
+///
+/// Only ever the future: `startDate` must be today or later, which is what
+/// keeps this from becoming a second way to repair a streak after the fact.
+/// A frozen day holds a streak where it is; it never adds to it.
+model StreakFreeze {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Inclusive "YYYY-MM-DD" bounds.
+  startDate String
+  endDate   String
+  reason    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, startDate])
 }
 
 /// Per-day facts that are not a weigh-in and not a meal.

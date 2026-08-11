@@ -91,7 +91,7 @@ export async function buildDigest(userId: string): Promise<Digest | null> {
   const days = weekEnding(lastDay);
   const from = days[0];
 
-  const [weights, meals, notes, priorWeights] = await Promise.all([
+  const [weights, meals, notes, priorWeights, freezes] = await Promise.all([
     prisma.weightEntry.findMany({
       where: { userId, date: { gte: from, lte: lastDay } },
       orderBy: { date: "asc" },
@@ -110,7 +110,11 @@ export async function buildDigest(userId: string): Promise<Digest | null> {
     // a real trailing mean rather than a mean of one morning.
     prisma.weightEntry.findMany({
       where: { userId, date: { gte: addDays(from, -6), lt: from } },
-      select: { date: true, weightLbs: true },
+      select: { date: true, weightLbs: true, source: true },
+    }),
+    prisma.streakFreeze.findMany({
+      where: { userId },
+      select: { startDate: true, endDate: true },
     }),
   ]);
 
@@ -165,7 +169,11 @@ export async function buildDigest(userId: string): Promise<Digest | null> {
     // Counted to yesterday, so a streak is not reported broken purely because
     // the person has not weighed in yet on the morning this arrives.
     streak: weighInStreak(
-      [...byDate.keys()].sort(),
+      [...priorWeights, ...weights].map((w) => ({
+        date: w.date,
+        source: w.source,
+      })),
+      freezes,
       lastDay,
     ).current,
     startLbs,

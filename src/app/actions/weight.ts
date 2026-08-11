@@ -4,10 +4,23 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isDayKey } from "@/lib/dates";
+import { addDays, isDayKey, todayIn } from "@/lib/dates";
 import { toLbs } from "@/lib/units";
 
 export type ActionResult = { ok: boolean; error?: string; saved?: number };
+
+/**
+ * Where a reading came from, decided from the date rather than from which form
+ * posted it: `date` arrives in the request body, so a direct POST could claim
+ * today's provenance for any day it liked.
+ *
+ * Only ever passed to a `create`. On an update the existing value stands — a
+ * typo corrected tomorrow must not demote a day that was logged live, and no
+ * amount of correcting can promote one that was typed in afterwards.
+ */
+function sourceFor(date: string, timezone: string): "live" | "backfill" {
+  return date === todayIn(timezone) ? "live" : "backfill";
+}
 
 // Sanity bounds in pounds. Catches a kg/lb mix-up or a slipped decimal point
 // before it lands in the chart and skews every axis.
@@ -49,23 +62,17 @@ export async function saveWeightAction(
   await prisma.weightEntry.upsert({
     where: { userId_date: { userId: user.id, date: parsed.data.date } },
     update: { weightLbs, note },
-    create: { userId: user.id, date: parsed.data.date, weightLbs, note },
+    create: {
+      userId: user.id,
+      date: parsed.data.date,
+      weightLbs,
+      note,
+      source: sourceFor(parsed.data.date, user.timezone),
+    },
   });
 
   revalidatePath("/");
   return { ok: true, saved: 1 };
-}
-
-export async function deleteWeightAction(formData: FormData) {
-  const user = await requireUser();
-
-  const date = String(formData.get("date") ?? "");
-  if (!isDayKey(date)) return;
-
-  // Scoped by userId, so a forged post cannot delete someone else's entry.
-  await prisma.weightEntry.deleteMany({ where: { userId: user.id, date } });
-
-  revalidatePath("/");
 }
 
 /**
@@ -102,7 +109,12 @@ export async function saveWeightForDateAction(input: {
   await prisma.weightEntry.upsert({
     where: { userId_date: { userId: user.id, date: input.date } },
     update: { weightLbs },
-    create: { userId: user.id, date: input.date, weightLbs },
+    create: {
+      userId: user.id,
+      date: input.date,
+      weightLbs,
+      source: sourceFor(input.date, user.timezone),
+    },
   });
 
   revalidatePath("/");
@@ -110,9 +122,82 @@ export async function saveWeightForDateAction(input: {
   return { ok: true, saved: 1 };
 }
 
+// --- Streak freezes --------------------------------------------------------
+
+/** A single freeze is capped, so one tap cannot pause a year. */
+const MAX_FREEZE_DAYS = 21;
+
+/**
+ * Declare a stretch of days away from the scale.
+ *
+ * **It may only start today or later.** That single rule is what keeps this
+ * from being a second way to fake a streak: a freeze protects a day you have
+ * not lived yet, never one you already missed. Nothing else needs guarding —
+ * a frozen day holds the number where it is rather than adding to it, so
+ * there is nothing to be gained by freezing more of them.
+ */
+export async function scheduleFreezeAction(input: {
+  startDate: string;
+  endDate: string;
+}): Promise<ActionResult> {
+  const user = await requireUser();
+  const { startDate, endDate } = input;
+
+  if (!isDayKey(startDate) || !isDayKey(endDate)) {
+    return { ok: false, error: "Pick both dates." };
+  }
+  if (endDate < startDate) {
+    return { ok: false, error: "The last day comes before the first one." };
+  }
+  const today = todayIn(user.timezone);
+  if (startDate < today) {
+    return {
+      ok: false,
+      error: "A freeze can only start today or later — past days are already counted.",
+    };
+  }
+  if (endDate >= addDays(startDate, MAX_FREEZE_DAYS)) {
+    return { ok: false, error: `${MAX_FREEZE_DAYS} days at a time is the most.` };
+  }
+
+  const clash = await prisma.streakFreeze.findFirst({
+    where: { userId: user.id, startDate: { lte: endDate }, endDate: { gte: startDate } },
+  });
+  if (clash) {
+    return { ok: false, error: "Those days overlap a freeze you already have." };
+  }
+
+  await prisma.streakFreeze.create({
+    data: { userId: user.id, startDate, endDate },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/calendar");
+  return { ok: true };
+}
+
+/**
+ * Call off a freeze that has not begun. One that has is left alone: it is
+ * already holding days, and withdrawing it would rewrite them.
+ */
+export async function cancelFreezeAction(id: string): Promise<ActionResult> {
+  const user = await requireUser();
+  const today = todayIn(user.timezone);
+
+  // Scoped by userId, so a forged id cannot cancel someone else's.
+  const { count } = await prisma.streakFreeze.deleteMany({
+    where: { id, userId: user.id, startDate: { gt: today } },
+  });
+  if (count === 0) return { ok: false, error: "That one has already started." };
+
+  revalidatePath("/");
+  revalidatePath("/calendar");
+  return { ok: true };
+}
+
 // --- Bulk import -----------------------------------------------------------
 
-/** Shared by the paste box and the Apple Health importer. */
+/** Behind the Apple Health importer. */
 async function saveRows(
   userId: string,
   units: "lb" | "kg",
@@ -143,7 +228,9 @@ async function saveRows(
         prisma.weightEntry.upsert({
           where: { userId_date: { userId, date: r.date } },
           update: { weightLbs: r.weightLbs },
-          create: { userId, date: r.date, weightLbs: r.weightLbs },
+          // A reading off a device is written for a past day, but it is not an
+          // unverifiable one — Health rows keep counting toward a streak.
+          create: { userId, date: r.date, weightLbs: r.weightLbs, source: "health" },
         }),
       ),
     );

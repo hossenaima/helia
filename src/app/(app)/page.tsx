@@ -8,11 +8,15 @@ import { PageTitle } from "@/components/page-title";
 import { UnitSwitch } from "@/components/unit-switch";
 import { WeighInForm } from "@/components/weigh-in-form";
 import { WeightChart } from "@/components/weight-chart";
-import { deleteWeightAction } from "@/app/actions/weight";
 import { WaterWeightBanner } from "@/components/water-weight-banner";
 import { ProgressRing } from "@/components/progress-ring";
 import { WeekStrip } from "@/components/week-strip";
-import { milestoneReached, weekEnding, weighInStreak } from "@/lib/calendar";
+import {
+  frozenDays,
+  milestoneReached,
+  weekEnding,
+  weighInStreak,
+} from "@/lib/calendar";
 import { MilestoneBanner } from "@/components/milestone-banner";
 import { flaggedMeals, rollingAverage } from "@/lib/nutrition";
 import { addDays } from "@/lib/dates";
@@ -26,10 +30,16 @@ export default async function WeightPage() {
   if (!user) redirect("/login");
 
   // Scoped to this account — the other user's log is never read here.
-  const entries = await prisma.weightEntry.findMany({
-    where: { userId: user.id },
-    orderBy: { date: "asc" },
-  });
+  const [entries, freezes] = await Promise.all([
+    prisma.weightEntry.findMany({
+      where: { userId: user.id },
+      orderBy: { date: "asc" },
+    }),
+    prisma.streakFreeze.findMany({
+      where: { userId: user.id },
+      select: { startDate: true, endDate: true },
+    }),
+  ]);
 
   // Only the last couple of days of meals are needed: the banner explains an
   // overnight jump, so anything older cannot be the cause.
@@ -106,7 +116,8 @@ export default async function WeightPage() {
 
   const loggedDates = new Set(entries.map((e) => e.date));
   const week = weekEnding(today);
-  const streak = weighInStreak([...loggedDates], today);
+  const streak = weighInStreak(entries, freezes, today);
+  const frozen = frozenDays(freezes);
 
   return (
     <>
@@ -189,7 +200,12 @@ export default async function WeightPage() {
                   : "no streak yet"}
               </p>
             </div>
-            <WeekStrip days={week} logged={loggedDates} today={today} />
+            <WeekStrip
+              days={week}
+              logged={loggedDates}
+              frozen={frozen}
+              today={today}
+            />
           </section>
         </>
       ) : (
@@ -266,6 +282,11 @@ export default async function WeightPage() {
                       {fromLbs(entry.weightLbs, units).toFixed(1)}
                     </span>
 
+                    {/* No delete button here. It sat one thumb-width from the
+                        number on every row of a scrolling list, and a tester
+                        lost a weigh-in to it — an accident that costs a trip
+                        back to the scale. Correcting or clearing a day happens
+                        on the calendar, where you pick the day first. */}
                     <span className="tnum w-24 text-right text-xs">
                       {delta === null ? (
                         <span className="text-ink-faint">—</span>
@@ -273,17 +294,6 @@ export default async function WeightPage() {
                         <DeltaText deltaLbs={delta} units={units} />
                       )}
                     </span>
-
-                    <form action={deleteWeightAction}>
-                      <input type="hidden" name="date" value={entry.date} />
-                      <button
-                        type="submit"
-                        aria-label={`Delete the weigh-in for ${formatDayShort(entry.date)}`}
-                        className="px-1 text-lg leading-none text-ink-faint transition-colors hover:text-up"
-                      >
-                        ×
-                      </button>
-                    </form>
                   </li>
                 );
               })}

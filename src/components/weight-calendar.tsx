@@ -21,10 +21,13 @@ export type CalendarEntry = { date: string; weightLbs: number };
  */
 export function WeightCalendar({
   entries,
+  frozen,
   today,
   units,
 }: {
   entries: CalendarEntry[];
+  /** Declared days away — marked so a gap in the grid explains itself. */
+  frozen: string[];
   today: string;
   units: Units;
 }) {
@@ -32,6 +35,7 @@ export function WeightCalendar({
     () => new Map(entries.map((e) => [e.date, e.weightLbs])),
     [entries],
   );
+  const frozenSet = useMemo(() => new Set(frozen), [frozen]);
 
   const [month, setMonth] = useState(() => monthKey(today));
   const [selected, setSelected] = useState<string | null>(null);
@@ -102,6 +106,7 @@ export function WeightCalendar({
           const isToday = day === today;
           const isSelected = day === selected;
           const future = day > today;
+          const isFrozen = !logged && frozenSet.has(day);
           const reading =
             entry === undefined ? null : round1(fromLbs(entry, units)).toFixed(1);
 
@@ -111,19 +116,30 @@ export function WeightCalendar({
               type="button"
               disabled={future}
               onClick={() => pick(day)}
-              aria-label={`${formatDayLong(day)}${reading ? `, ${reading} ${units}` : ", not logged"}`}
+              aria-label={`${formatDayLong(day)}${
+                reading
+                  ? `, ${reading} ${units}`
+                  : isFrozen
+                    ? ", frozen"
+                    : ", not logged"
+              }`}
               aria-pressed={isSelected}
               className={`
                 relative flex aspect-square flex-col items-center justify-center
                 rounded-xl leading-none font-semibold
-                transition-colors disabled:opacity-20
+                transition-colors
+                ${/* A frozen day stays legible even though it is in the
+                      future — it is the one future day worth seeing. */ ""}
+                ${future && !isFrozen ? "opacity-20" : ""}
                 ${isToday && !isSelected ? "ring-2 ring-ink/25" : ""}
                 ${
                   isSelected
                     ? "bg-ink text-ground"
                     : logged
                       ? "bg-trace/12 text-ink"
-                      : "text-ink-muted hover:bg-surface-sunk"
+                      : isFrozen
+                        ? "bg-surface-sunk text-ink-faint"
+                        : "text-ink-muted hover:bg-surface-sunk"
                 }
               `}
             >
@@ -142,6 +158,11 @@ export function WeightCalendar({
               {reading && (
                 <span className="tnum mt-0.5 text-[0.68rem] font-bold">
                   {reading}
+                </span>
+              )}
+              {isFrozen && (
+                <span aria-hidden className="mt-0.5 text-[0.6rem] leading-none">
+                  ❄️
                 </span>
               )}
             </button>

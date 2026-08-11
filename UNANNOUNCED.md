@@ -25,6 +25,23 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
+*As of 2026-08-11.*
+
+- **Nothing to delete by accident.** The little × at the end of every row of the
+  weight log is gone. A tester deleted a weigh-in with it by mistake, and the
+  only way back is another trip to the scale. To remove or fix a day, tap it on
+  the calendar and clear the box.
+- **Freeze your streak while you are away.** Calendar → *Going away? Freeze your
+  streak*, pick the days, and a missing weigh-in on a trip will not break your
+  run. Frozen days hold your streak where it is rather than adding to it, and
+  they have to be picked before you go — a freeze cannot cover a day already
+  past. No morning reminder while you are frozen either.
+- **Streaks count days you actually logged.** Typing a weight into a past day on
+  the calendar no longer raises your streak. It is still your data and still
+  draws on the chart — it just is not proof you stood on a scale that morning.
+  Weigh-ins brought in from Apple Health do still count. **Some streaks will read
+  lower than they did**, which is the correction, not a bug.
+
 *As of 2026-08-10. All deployed and live.*
 
 - **Your email, and what it is used for.** Settings now has an Announcements

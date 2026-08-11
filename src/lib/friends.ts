@@ -79,15 +79,27 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
   });
   if (others.length === 0) return [];
 
-  const entries = await prisma.weightEntry.findMany({
-    where: { userId: { in: others.map((o) => o.id) } },
-    orderBy: { date: "asc" },
-    select: { userId: true, date: true, weightLbs: true },
-  });
+  const [entries, freezes] = await Promise.all([
+    prisma.weightEntry.findMany({
+      where: { userId: { in: others.map((o) => o.id) } },
+      orderBy: { date: "asc" },
+      select: { userId: true, date: true, weightLbs: true, source: true },
+    }),
+    // Their freezes, so a friend's streak reads the same on their card as it
+    // does on their own screen.
+    prisma.streakFreeze.findMany({
+      where: { userId: { in: others.map((o) => o.id) } },
+      select: { userId: true, startDate: true, endDate: true },
+    }),
+  ]);
 
   const byUser = new Map<string, typeof entries>();
   for (const e of entries) {
     byUser.set(e.userId, [...(byUser.get(e.userId) ?? []), e]);
+  }
+  const freezesByUser = new Map<string, typeof freezes>();
+  for (const f of freezes) {
+    freezesByUser.set(f.userId, [...(freezesByUser.get(f.userId) ?? []), f]);
   }
 
   // Only fetch food for the people who share some of it, and only their own
@@ -116,7 +128,7 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
     const latest = mine.at(-1) ?? null;
     const previous = mine.at(-2) ?? null;
     const today = todayIn(other.timezone);
-    const streak = weighInStreak(mine.map((m) => m.date), today);
+    const streak = weighInStreak(mine, freezesByUser.get(other.id) ?? [], today);
     const theirMeals = mealsByUser.get(other.id) ?? [];
 
     return {

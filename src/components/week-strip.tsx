@@ -11,16 +11,21 @@ import { dayKeyToDate } from "@/lib/dates";
 export function WeekStrip({
   days,
   logged,
+  frozen,
   today,
 }: {
   days: string[];
   logged: Set<string>;
+  /** Declared days away. Shown, because an empty day that did not break the
+   *  streak otherwise looks like the count is wrong. */
+  frozen: Set<string>;
   today: string;
 }) {
   return (
     <ul className="mt-4 flex justify-between gap-1">
       {days.map((day) => {
         const has = logged.has(day);
+        const isFrozen = !has && frozen.has(day);
         const isToday = day === today;
         const letter = new Intl.DateTimeFormat("en-US", {
           timeZone: "UTC",
@@ -31,7 +36,7 @@ export function WeekStrip({
           <li key={day} className="flex flex-1 flex-col items-center gap-1.5">
             <span className="text-[0.7rem] font-bold text-ink-faint">{letter}</span>
             <span
-              title={day}
+              title={isFrozen ? `${day} · frozen` : day}
               className={`
                 flex aspect-square w-full max-w-11 items-center justify-center
                 rounded-2xl text-sm font-bold
@@ -44,7 +49,7 @@ export function WeekStrip({
                 }
               `}
             >
-              {Number(day.slice(8))}
+              {isFrozen ? <span aria-hidden>❄️</span> : Number(day.slice(8))}
             </span>
           </li>
         );

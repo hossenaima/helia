@@ -148,7 +148,11 @@ Days are `"YYYY-MM-DD"` strings, never timestamps. Weights are always stored in
   and target figures, `units`,
   `timezone`, `notifyWeighIn`/`notifyFriends`/`reminderHour`, `lastRemindedOn`,
   `milestoneLbs` (largest celebration already shown), `shareWeight`
-- **WeightEntry** — one per `(userId, date)`; re-submitting corrects it
+- **WeightEntry** — one per `(userId, date)`; re-submitting corrects it. Carries
+  `source` (`live` | `health` | `backfill`), which decides whether the day
+  counts toward a streak
+- **StreakFreeze** — an inclusive day range the user declared they would be
+  away. Only ever starts today or later
 - **Meal** → **MealItem** — items carry `basis` (the estimator's working),
   `source`, and `precision` (`exact` | `estimated`)
 - **DayLog** — per-day `activeBurnKcal`
@@ -232,6 +236,64 @@ does not depend on the log. A pound of fat is thousands of calories, so an
 overnight jump is water and digestion whether or not anything was written down —
 and a bad morning after an unlogged evening is the one *most* in need of the
 note. A flagged meal now only decides whether the banner names a culprit.
+
+### Streaks
+
+**A streak counts where a reading came from, not that a row exists.** Until
+2026-08-11 it counted rows, and a tester demonstrated the obvious consequence:
+open the calendar, type numbers into the days you missed, and the streak goes
+up. Jerry's eight-day streak was four real days plus two typed in on Aug 10.
+Nothing about that is malicious — the calendar is *for* filling gaps, and a
+number you type there is still your data and still belongs on the chart. It
+just cannot also be evidence that you turned up.
+
+`WeightEntry.source` records the provenance: `live` (logged on the day it is
+for), `health` (came out of an Apple Health export), `backfill` (typed in for a
+day already past). Only `backfill` is excluded. **Health imports still count**,
+which is why this is a column rather than the one-line `createdAt === date`
+comparison it looks like it should be: the owner's own history holds a real
+21-day run that arrived through the importer, and a rule keyed on timing alone
+erases it along with the fabrications. Provenance is the thing that actually
+differs, so provenance is what is stored.
+
+**`source` is set on create, never on update.** Correcting today's figure
+tomorrow must not demote a day that really was logged live, and no amount of
+correcting can promote one that was not. It is also decided from the *date*
+rather than from which form posted — `date` arrives in the request body, so a
+direct POST could otherwise claim today's provenance for any day it liked.
+
+**One consequence, accepted:** a day backfilled by hand and later confirmed by a
+Health import stays `backfill`, because the import only writes `source` on
+create. Rare, and the alternative — letting an import upgrade rows — is a way to
+launder a typed-in number through an export nobody checks.
+
+**The migration named the one real import by its timestamp window** rather than
+inferring it. Fifty-one rows written in a two-second burst on 2026-08-03 are
+obviously an import and two rows typed 23 seconds apart obviously are not, but a
+"burst means import" heuristic in a migration is a rule nobody can check
+afterwards. Every import since labels itself.
+
+**A freeze can only start today or later.** That single rule is the whole
+anti-cheat: it protects a day you have not lived yet, never one you already
+missed — otherwise it is just the calendar backfill again with a nicer name.
+
+**A frozen day holds the streak where it is; it never adds to it.** This is what
+makes an unlimited freeze harmless and is why there is no budget, no earning
+them, and no Duolingo-style economy to build. Freezing a month leaves you
+exactly where you were, so there is nothing to win. A single freeze is capped at
+21 days only so one tap cannot pause a year.
+
+**The frozen days are drawn.** A gap in the week strip that did not break the
+streak looks like the count is broken, so an empty frozen day shows ❄️ there and
+on the calendar. The number and the picture have to agree.
+
+**There is no delete button on a log row.** There was an `×` at the end of every
+row of the Weight tab's list — a destructive, unconfirmed control one thumb-width
+from the figures, on a list you scroll. A tester lost a weigh-in to it, and the
+cost of that is a trip back to the scale. Deletion lives on the calendar, where
+you pick the day *first* and then clear the box, and where the action names the
+day it is about. Compare the friend-removal dialog: the same reasoning, one
+step further, for something irreversible.
 
 ### Meals
 
