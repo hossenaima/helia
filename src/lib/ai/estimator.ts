@@ -154,6 +154,15 @@ part of a plate is a part-sized serving.** A modest heap on a large plate is
 what it looks like — do not round it up to a full restaurant portion because the
 plate is big.
 
+**Then check that it all fits.** Name the vessel first — the plate's diameter,
+the bowl's or box's capacity — and say it in the note. Cooked food weighs
+roughly a gram per millilitre, so the weights you have given cannot add up to
+more than the vessel holds, and they must add up to less again when the photo
+shows it part full. Add your own grams up and compare before you answer; if the
+total does not fit what you can see, every component is too big and all of them
+come down together. Estimating each item on its own and never checking the sum
+is how a plate of food turns into half as much again.
+
 Count only the meal this photo is of. Another plate at the edge of the frame, or
 food in the background, belongs to somebody else.
 

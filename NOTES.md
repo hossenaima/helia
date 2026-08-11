@@ -462,6 +462,28 @@ failed outright, cause not chased). The 15-dish figures were not a fluke of the
 sample, and the median well below the mean is the shape to expect — most dishes
 land within a third, and a couple are wrong by multiples.
 
+**The vessel has to hold what you claim is in it.** Found on the first real
+phone photo a tester sent: a glass meal-prep box of chicken and pesto fusilli,
+truth ~550 kcal, estimated 930–1021. Its own note said the container was
+"700–750 ml" and it then assigned 480 g of components into a box the photo shows
+part empty. It was pricing each item in isolation and never checking they fit
+the vessel it had just described — over-read everything slightly, independently,
+and the errors compound. The prompt now makes it name the vessel, add up its own
+grams, and scale everything down together when the total does not fit.
+
+Measured over 29 dishes it tightened the middle without touching the bias:
+median 36% → 29%, within a quarter of truth 39% → 48%, within half 61% → 69%,
+mean 53% → 56% (the mean is outlier-driven and moved the other way), bias +37% →
++39%. Three distribution measures improving by 7–9 points is suggestive rather
+than proven at this sample size — **kept because the share of meals landing close
+is what a person experiences, while the mean is one 3× miss away from anything.**
+
+**Run-to-run variance is about 10% on an identical image**, at temperature 0.2.
+The tester's 930 and the same photo's 1021 through the same code are the same
+input. **No single meal can validate a prompt change**, and effects smaller than
+a few points are invisible at 15 dishes. This is the reason the harness exists
+and the reason not to trust a good-looking one-off.
+
 **A short description from the person is worth about as much as the prompt fix.**
 On the untouched prompt, adding three words naming the food took mean error 73%
 → 55% and bias +59% → +39%. That is the strongest evidence for keeping the
