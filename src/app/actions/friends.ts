@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser, toHandle } from "@/lib/auth";
 import { notifyFriendActivity } from "@/lib/push";
@@ -117,64 +116,6 @@ export async function removeFriendAction(formData: FormData) {
     },
   });
 
-  revalidatePath("/friends");
-}
-
-const encouragementSchema = z.object({
-  toId: z.string().min(1),
-  body: z.string().trim().min(1, "Say something.").max(200),
-});
-
-export async function sendEncouragementAction(
-  _prev: FriendResult,
-  formData: FormData,
-): Promise<FriendResult> {
-  const me = await requireUser();
-
-  const parsed = encouragementSchema.safeParse({
-    toId: formData.get("toId"),
-    body: formData.get("body"),
-  });
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message };
-  }
-
-  // Only to an accepted friend — this is not a way to message strangers.
-  const friends = await prisma.friendship.findFirst({
-    where: {
-      status: "accepted",
-      OR: [
-        { requesterId: me.id, addresseeId: parsed.data.toId },
-        { requesterId: parsed.data.toId, addresseeId: me.id },
-      ],
-    },
-  });
-  if (!friends) return { ok: false, error: "You are not friends with them." };
-
-  await prisma.encouragement.create({
-    data: { fromId: me.id, toId: parsed.data.toId, body: parsed.data.body },
-  });
-
-  await notifyFriendActivity(parsed.data.toId, {
-    title: `${me.name} says`,
-    body: parsed.data.body,
-    url: "/friends",
-    // Not tagged per-sender: a second note should not silently replace the
-    // first one sitting unread in the tray.
-    tag: `note-${Date.now()}`,
-    at: Date.now(),
-  });
-
-  revalidatePath("/friends");
-  return { ok: true, message: "Sent." };
-}
-
-export async function markEncouragementsReadAction() {
-  const me = await requireUser();
-  await prisma.encouragement.updateMany({
-    where: { toId: me.id, readAt: null },
-    data: { readAt: new Date() },
-  });
   revalidatePath("/friends");
 }
 

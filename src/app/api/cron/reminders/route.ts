@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { addDays, dayKeyIn, isValidTimezone, todayIn } from "@/lib/dates";
 import { pushToUser } from "@/lib/push";
-import { noteCutoff } from "@/lib/friends";
 import { frozenDays, weighInStreak } from "@/lib/calendar";
 
 /**
@@ -26,11 +25,10 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
 
-  // Housekeeping on the sweep that already runs. The friends page filters
-  // expired notes out regardless, so this is only about not keeping text
-  // someone was told had gone.
-  const { count: notesPurged } = await prisma.encouragement.deleteMany({
-    where: { readAt: { lt: noteCutoff(now) } },
+  // Chat retention: 90 days, decided 2026-08-12. "Clear chat" only hides;
+  // this is where messages actually die.
+  const { count: messagesPurged } = await prisma.message.deleteMany({
+    where: { createdAt: { lt: new Date(now.getTime() - 90 * 86_400_000) } },
   });
 
   const candidates = await prisma.user.findMany({
@@ -123,7 +121,7 @@ export async function GET(request: NextRequest) {
     skippedAlreadyLogged,
     skippedAlreadySent,
     skippedFrozen,
-    notesPurged,
+    messagesPurged,
     at: todayIn("UTC"),
   });
 }

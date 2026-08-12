@@ -203,16 +203,3 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
     };
   });
 }
-
-/**
- * How long a note stays after it has been read.
- *
- * Encouragement is about a moment — "nice work today" a fortnight later is
- * clutter, not warmth. Unread notes never expire: the clock starts when you
- * have actually seen it, not when it was sent, so nothing vanishes unread.
- */
-export const NOTE_TTL_HOURS = 12;
-
-export function noteCutoff(now = new Date()): Date {
-  return new Date(now.getTime() - NOTE_TTL_HOURS * 60 * 60 * 1000);
-}

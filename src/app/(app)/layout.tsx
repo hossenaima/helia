@@ -39,7 +39,18 @@ export default async function AppLayout({
     prisma.friendship.count({
       where: { addresseeId: user.id, status: "pending" },
     }),
-    prisma.encouragement.count({ where: { toId: user.id, readAt: null } }),
+    // Unread chat, not unread notes. No cleared-at filter needed: clearing a
+    // chat also marks its incoming messages read, so readAt is the whole truth.
+    prisma.message.count({
+      where: {
+        readAt: null,
+        senderId: { not: user.id },
+        friendship: {
+          status: "accepted",
+          OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+        },
+      },
+    }),
   ]);
 
   return (

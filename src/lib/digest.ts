@@ -100,9 +100,24 @@ export async function buildDigest(userId: string): Promise<Digest | null> {
       where: { userId, date: { gte: from, lte: lastDay } },
       include: { items: true },
     }),
-    prisma.encouragement.findMany({
-      where: { toId: userId, createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
-      include: { from: { select: { name: true } } },
+    prisma.message.findMany({
+      where: {
+        senderId: { not: userId },
+        createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) },
+        friendship: {
+          status: "accepted",
+          OR: [{ requesterId: userId }, { addresseeId: userId }],
+        },
+      },
+      include: {
+        friendship: {
+          select: {
+            requesterId: true,
+            requester: { select: { name: true } },
+            addressee: { select: { name: true } },
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
@@ -199,7 +214,13 @@ export async function buildDigest(userId: string): Promise<Digest | null> {
     avgProteinG: mean(loggedDays.map((d) => d.proteinG)),
     calorieTarget: user.calorieTarget,
     proteinTargetG: user.proteinTargetG,
-    encouragements: notes.map((n) => ({ from: n.from.name, body: n.body })),
+    encouragements: notes.map((n) => ({
+      from:
+        n.friendship.requesterId === n.senderId
+          ? n.friendship.requester.name
+          : n.friendship.addressee.name,
+      body: n.body,
+    })),
     units: user.units,
     empty: weighed.length === 0 && loggedDays.length === 0,
   };
