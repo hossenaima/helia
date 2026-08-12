@@ -25,8 +25,7 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
-*As of 2026-08-12. Not yet deployed — do not send until the owner confirms
-`npx vercel deploy --prod` is live.*
+*As of 2026-08-12. Deployed and live.*
 
 - **Notes are now chats.** Your notes to a friend land in a conversation —
   open it from their card on the Friends tab. You can scroll back through a

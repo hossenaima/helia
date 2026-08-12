@@ -46,9 +46,11 @@ small celebrations when a milestone or a calorie target is met.
 Saleh, fatboy and Nyan Lin Htet. Spider Man and Nahian were deleted on
 2026-08-12 — no longer testing, on the owner's instruction (one weigh-in and
 two friendship rows cascaded with them). Notes were replaced by a per-friend
-chat on the `chat` branch the same day — see [Chat](#chat) — browser-verified
-end to end but **not yet deployed**; `main` is pushed and still running the
-old note-based build. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
+chat the same day — see [Chat](#chat) — browser-verified end to end and
+**deployed to production on 2026-08-12** (top-up INSERT run before and after
+the deploy per the runbook: 3 in-window notes carried across, 0 stragglers;
+all five signed-in tabs confirmed live). The `Encouragement` table still
+exists, orphaned, awaiting its post-deploy DROP in a later release. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
 logged, the calendar —
 which now shows each day's reading — and Apple Health import, meals with Gemini
 estimation and one-tap reuse of a past meal, friends with account-wide weight
