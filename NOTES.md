@@ -1177,6 +1177,47 @@ service worker fetches has to match an exemption; naming it into the existing
 
 ---
 
+## Performance
+
+Measured on production with a data-bearing account before anything was changed
+— **TTFB was already 20ms**, so server or CDN caching of HTML had nothing to
+offer, and the service worker's no-cache rule ("stale numbers are worse than
+none") stands unchallenged. The cost was all client-side JavaScript.
+
+**Recharts is a 364 kB chunk, and it was landing on the morning tab.** Every
+route shares ~570 kB; `/` alone added Recharts for a chart that sits ~960px
+below the fold of a 844px viewport. `LazyWeightChart` defers it behind an
+IntersectionObserver: **first-load JS on the Weight tab went 929 kB → 524 kB**.
+On the Wi-Fi test box DCL did not move (~1.7s) — that metric never included the
+chunk, which loaded after it; what the deferral removes is 364 kB of download
+and parse from every cold open on a phone.
+
+Two traps found by measuring, either of which would have shipped broken:
+
+- **A generous `rootMargin` un-defers everything.** 300px of margin reached the
+  chart's anchor while the page was still at rest, so the chunk loaded
+  immediately and the "deferral" was a no-op. Check `hasSvg` at rest, not just
+  that the code says lazy.
+- **An IntersectionObserver alone strands fast scrollers.** It samples state;
+  an instant jump (scroll restoration, scrollTo, a jump link) can cross the
+  element between samples and never report intersecting — permanent skeleton.
+  A `once` scroll listener backstops it: on this tab, anybody scrolling is
+  heading for the chart.
+
+**`staleTimes.dynamic: 30`** lets a tab already visited come back from the
+client cache: repeat tab switches went ~355ms → ~275ms. Thirty seconds, not
+more, for the same reason the service worker caches nothing — and your own
+writes still appear instantly, because every mutating action calls
+`revalidatePath`, which drops that path's client cache. The only staleness this
+can introduce is another person's weigh-in being up to 30s old on Friends.
+
+**What was tried and not kept: nothing yet** — but know that DCL/FCP on a fast
+connection will not show bundle work. Throttle CPU and network and clear the
+HTTP cache between arms, or the numbers confound; one A/B here was invalidated
+by the second arm reading the first arm's cache.
+
+---
+
 ## Motion
 
 **Deliberately no animation library.** Motion is ~42kB gzipped on `motion/react`

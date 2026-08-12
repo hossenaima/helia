@@ -7,7 +7,7 @@ import { formatDelta, fromLbs, formatWeight, type Units } from "@/lib/units";
 import { PageTitle } from "@/components/page-title";
 import { UnitSwitch } from "@/components/unit-switch";
 import { WeighInForm } from "@/components/weigh-in-form";
-import { WeightChart } from "@/components/weight-chart";
+import { LazyWeightChart } from "@/components/weight-chart-lazy";
 import { WaterWeightBanner } from "@/components/water-weight-banner";
 import { ProgressRing } from "@/components/progress-ring";
 import { WeekStrip } from "@/components/week-strip";
@@ -228,7 +228,7 @@ export default async function WeightPage() {
 
       <section className="mt-8" aria-label="Weight over time">
         <h2 className="eyebrow">Morning weight over time</h2>
-        <WeightChart
+        <LazyWeightChart
           points={entries.map((e) => ({
             date: e.date,
             weightLbs: e.weightLbs,
