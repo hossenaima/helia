@@ -754,6 +754,41 @@ actually serving, and dropping the table inside that window would break it.
 Until the second migration lands, the table sits there unused and harmless —
 cheaper than getting the two-release order wrong twice.
 
+**The migration's copy of `Encouragement` into `Message` is one-shot, but the
+old build keeps writing `Encouragement` rows until the new one is actually
+serving.** `migrate deploy` runs before `next build`/deploy, so there is a
+window — however short — where the schema already has `Message` but
+production is still running the old code, still writing notes as
+`Encouragement`. Anything written in that window is invisible to the new
+build, which reads only `Message`; it would silently vanish, not error. The
+fix is a top-up, not a rerun of the migration (a migration file only runs
+once, and re-numbering history to run it again would replay every migration
+after it too). The runbook:
+
+1. Run this against production (session pooler) — the migration's INSERT,
+   made idempotent with `NOT EXISTS` so running it a second time is a no-op
+   instead of a duplicate-key error or double-counted messages:
+
+   ```sql
+   INSERT INTO "Message" ("id", "friendshipId", "senderId", "body", "readAt", "createdAt")
+   SELECT e."id", f."id", e."fromId", e."body", e."readAt", e."createdAt"
+   FROM "Encouragement" e
+   JOIN "Friendship" f
+     ON (f."requesterId" = e."fromId" AND f."addresseeId" = e."toId")
+     OR (f."requesterId" = e."toId"   AND f."addresseeId" = e."fromId")
+   WHERE NOT EXISTS (SELECT 1 FROM "Message" m WHERE m."id" = e."id");
+   ```
+
+2. `npx vercel deploy --prod`.
+3. Confirm signed-in tabs load.
+4. Only in a later release, `DROP TABLE "Encouragement"`.
+
+This SQL does not live in `prisma/migrations`. It is a deploy-step script, run
+once by hand at deploy time, not schema history — a later `migrate deploy`
+replays migrations in order against the DROP that eventually lands, and a
+top-up masquerading as a migration would replay in the wrong place relative
+to that DROP.
+
 ### Identity and credentials
 
 **The display name and the login key were already separate columns**, which is

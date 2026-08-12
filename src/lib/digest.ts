@@ -100,6 +100,10 @@ export async function buildDigest(userId: string): Promise<Digest | null> {
       where: { userId, date: { gte: from, lte: lastDay } },
       include: { items: true },
     }),
+    // Deliberately shows the week's received messages even if they've since
+    // been read or cleared — parity with the old notes digest, which also
+    // showed read notes. Read-state is what the in-app badge respects; the
+    // digest is a summary of the week, not a filtered inbox.
     prisma.message.findMany({
       where: {
         senderId: { not: userId },

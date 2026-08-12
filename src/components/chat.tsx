@@ -48,7 +48,7 @@ export function Chat({
   const [state, sendAction, sending] = useActionState(sendMessageAction, INITIAL);
   const [body, setBody] = useState("");
   const clearRef = useRef<HTMLDialogElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLLIElement>(null);
 
   // Opening the chat is reading it. Idempotent on the server, so firing on
   // every open (and after polls that brought something new) is safe.
@@ -79,9 +79,11 @@ export function Chat({
     <>
       <ul className="mt-5 space-y-2" aria-label={`Messages with ${friendName}`}>
         {messages.length === 0 && (
-          <p className="text-sm text-ink-muted">
-            No messages yet. Say hi — they get a notification.
-          </p>
+          <li className="list-none">
+            <p className="text-sm text-ink-muted">
+              No messages yet. Say hi — they get a notification.
+            </p>
+          </li>
         )}
         {messages.map((m) => (
           <li
@@ -100,7 +102,7 @@ export function Chat({
             </p>
           </li>
         ))}
-        <div ref={endRef} />
+        <li ref={endRef} aria-hidden className="list-none" />
       </ul>
 
       <form
