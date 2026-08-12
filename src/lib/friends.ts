@@ -30,6 +30,10 @@ export type FriendSummary = {
   /** Whether *you* share your food with them. Per-friend, so it is a control
    *  on their card rather than one switch in Settings. */
   iShareMeals: boolean;
+  friendshipId: string;
+  /** The chat, as it appears to YOU: unread and preview both respect your cleared-at. */
+  unread: number;
+  lastMessage: { body: string; fromMe: boolean } | null;
 };
 
 /**
@@ -75,11 +79,13 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
       ...(mine ? l.addressee : l.requester),
       sharesMealsWithMe: mine ? l.addresseeSharesMeals : l.requesterSharesMeals,
       iShareMeals: mine ? l.requesterSharesMeals : l.addresseeSharesMeals,
+      friendshipId: l.id,
+      myClearedAt: mine ? l.requesterClearedAt : l.addresseeClearedAt,
     };
   });
   if (others.length === 0) return [];
 
-  const [entries, freezes] = await Promise.all([
+  const [entries, freezes, messages] = await Promise.all([
     prisma.weightEntry.findMany({
       where: { userId: { in: others.map((o) => o.id) } },
       orderBy: { date: "asc" },
@@ -91,6 +97,19 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
       where: { userId: { in: others.map((o) => o.id) } },
       select: { userId: true, startDate: true, endDate: true },
     }),
+    // One query for all friends; a month of chat between six people is small,
+    // and the per-friend split below is a Map pass like the others.
+    prisma.message.findMany({
+      where: { friendshipId: { in: links.map((l) => l.id) } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        friendshipId: true,
+        senderId: true,
+        body: true,
+        readAt: true,
+        createdAt: true,
+      },
+    }),
   ]);
 
   const byUser = new Map<string, typeof entries>();
@@ -100,6 +119,13 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
   const freezesByUser = new Map<string, typeof freezes>();
   for (const f of freezes) {
     freezesByUser.set(f.userId, [...(freezesByUser.get(f.userId) ?? []), f]);
+  }
+  const messagesByFriendship = new Map<string, typeof messages>();
+  for (const m of messages) {
+    messagesByFriendship.set(m.friendshipId, [
+      ...(messagesByFriendship.get(m.friendshipId) ?? []),
+      m,
+    ]);
   }
 
   // Only fetch food for the people who share some of it, and only their own
@@ -130,6 +156,9 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
     const today = todayIn(other.timezone);
     const streak = weighInStreak(mine, freezesByUser.get(other.id) ?? [], today);
     const theirMeals = mealsByUser.get(other.id) ?? [];
+    const visible = (messagesByFriendship.get(other.friendshipId) ?? []).filter(
+      (m) => !other.myClearedAt || m.createdAt > other.myClearedAt,
+    );
 
     return {
       id: other.id,
@@ -165,6 +194,12 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
       loggedToday: latest?.date === today,
       shares: { weight: other.shareWeight, meals: other.sharesMealsWithMe },
       iShareMeals: other.iShareMeals,
+      friendshipId: other.friendshipId,
+      unread: visible.filter((m) => m.senderId === other.id && m.readAt === null)
+        .length,
+      lastMessage: visible[0]
+        ? { body: visible[0].body, fromMe: visible[0].senderId !== other.id }
+        : null,
     };
   });
 }
