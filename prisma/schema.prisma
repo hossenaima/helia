@@ -277,6 +277,14 @@ model Friendship {
   requesterSharesMeals Boolean @default(false)
   addresseeSharesMeals Boolean @default(false)
 
+  /// "Clear chat", held per side like the meal flags: clearing hides the
+  /// conversation so far from YOUR view only. The friend keeps theirs, and
+  /// unfriending is the only thing that destroys a chat for both sides.
+  requesterClearedAt DateTime?
+  addresseeClearedAt DateTime?
+
+  messages Message[]
+
   createdAt   DateTime  @default(now())
   respondedAt DateTime?
 
@@ -301,6 +309,21 @@ model Encouragement {
   createdAt DateTime @default(now())
 
   @@index([toId, createdAt])
+}
+
+/// One chat message. The Friendship row IS the conversation — 1:1 only, by
+/// decision (2026-08-12): there will be no group chats. `senderId` is one end
+/// of the friendship, not a User FK; deletion cascades through Friendship.
+model Message {
+  id           String     @id @default(cuid())
+  friendshipId String
+  friendship   Friendship @relation(fields: [friendshipId], references: [id], onDelete: Cascade)
+  senderId     String
+  body         String
+  readAt       DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([friendshipId, createdAt])
 }
 
 /// One browser's push endpoint. A person may have several — phone, laptop —
