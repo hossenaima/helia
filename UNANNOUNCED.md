@@ -25,6 +25,17 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
+*As of 2026-08-12. Not yet deployed — do not send until the owner confirms
+`npx vercel deploy --prod` is live.*
+
+- **Notes are now chats.** Your notes to a friend land in a conversation —
+  open it from their card on the Friends tab. You can scroll back through a
+  message history instead of watching notes vanish after 12 hours; messages
+  are kept for 90 days. Clear a chat any time from inside it — that clears
+  your view only, and your friend keeps theirs. You still get a notification
+  when a message arrives, and the little quick-note buttons still work — they
+  just live in the chat now.
+
 *As of 2026-08-11. All deployed and live.*
 
 - **Photograph your meal and Helia will read it.** On the Meals tab, tap **Take or choose a

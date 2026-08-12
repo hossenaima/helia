@@ -45,12 +45,16 @@ small celebrations when a milestone or a calorie target is met.
 **State of play, 2026-08-12.** Six accounts: the owner plus Jerry, Matthew,
 Saleh, fatboy and Nyan Lin Htet. Spider Man and Nahian were deleted on
 2026-08-12 — no longer testing, on the owner's instruction (one weigh-in and
-two friendship rows cascaded with them). `main` is pushed. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
+two friendship rows cascaded with them). Notes were replaced by a per-friend
+chat on the `chat` branch the same day — see [Chat](#chat) — browser-verified
+end to end but **not yet deployed**; `main` is pushed and still running the
+old note-based build. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
 logged, the calendar —
 which now shows each day's reading — and Apple Health import, meals with Gemini
 estimation and one-tap reuse of a past meal, friends with account-wide weight
 sharing and **per-friend** food sharing, a week chart behind each friend card,
-web push reminders on an hourly GitHub Actions sweep, and milestone
+a persistent per-friend chat (90-day retention) in place of the old 12-hour
+notes, web push reminders on an hourly GitHub Actions sweep, and milestone
 celebrations. Not yet built: the steps-driven calorie bar. See
 [Open items](#open-items) for what is waiting.
 
@@ -160,9 +164,14 @@ Days are `"YYYY-MM-DD"` strings, never timestamps. Weights are always stored in
   `source`, and `precision` (`exact` | `estimated`)
 - **DayLog** — per-day `activeBurnKcal`
 - **Friendship** — one row with a `status`, not two mirrored rows; carries
-  `requesterSharesMeals`/`addresseeSharesMeals`, since food sharing is
-  per-friend and directional
-- **Encouragement** — `readAt` drives the 12-hour expiry
+  `requesterSharesMeals`/`addresseeSharesMeals` (food sharing is per-friend and
+  directional) and `requesterClearedAt`/`addresseeClearedAt` (a chat clear is
+  per-side too)
+- **Message** — one chat message, hung off `Friendship` rather than two user
+  ids; `readAt` drives the unread badge, not an expiry. Purged after 90 days by
+  the hourly sweep, not by this table. **`Encouragement`, the table it
+  replaced, is still in the schema** — orphaned, not yet dropped, see
+  [Chat](#chat)
 - **PushSubscription** — unique by `endpoint`
 
 ## Load-bearing decisions
@@ -657,12 +666,6 @@ interrupts you to say well done, this one stops you deleting something.
 component rule here — and the backdrop has to be named explicitly, because it
 is a top-layer pseudo-element that no descendant selector reaches.
 
-**A note is deleted 12 hours after it is *read*, not after it is sent.** An
-unread note waits indefinitely, so nothing can vanish before it has been seen.
-The page filters expired ones so the moment is exact; the cron deletes them so
-text the reader was told had gone is not still in the table. The card shows a
-live "fades in 11h" — a message that silently disappears reads as a bug.
-
 **Notification kinds are separate from the hour.** `notifyWeighIn` decides
 *whether*, `reminderHour` decides *when*. Collapsing them into a nullable hour
 meant turning reminders off also forgot the chosen time.
@@ -697,6 +700,59 @@ the same query.
 
 **`notifyFriendActivity` never throws into its caller.** A push service being
 slow is not a reason for the friend request itself to fail.
+
+### Chat
+
+**Notes became a conversation, on the decision (2026-08-12) that a friendship
+*is* a chat.** `Message.friendshipId` points at `Friendship`, not at two user
+ids, and there will be no group chats — 1:1 forever, by design. That single
+choice buys two things at once: a friendship row already carries exactly the
+two people in the conversation, so there is nothing to authorise beyond
+`friendshipWith()`'s existing accepted-status check, and deleting an account
+cascades through `Friendship` to `Message` for free — no separate cleanup path
+to keep in step with `verify-delete`, the way `Encouragement` (fromId/toId,
+two independent FKs) needed its own.
+
+**Clearing a chat is per-side, and it is a timestamp, not a delete.**
+`Friendship.requesterClearedAt` / `addresseeClearedAt` — same two-columns-one-
+row shape as `requesterSharesMeals` / `addresseeSharesMeals`, and for the same
+reason: one row covers both directions, and clearing your view says nothing
+about clearing your friend's. A message is simply invisible to a side whose
+column postdates it (`createdAt <= clearedAt`); nothing is deleted, so the
+other side's history — and the 90-day retention window below — is untouched.
+
+**Clearing also marks the incoming half read, which is not obviously part of
+"clear".** Skip that and an unread message that has just been hidden can never
+be marked read by anything — the badge counts it forever and the only UI that
+could clear it is gone. `clearChatAction` runs both writes together for this
+reason: a phantom badge is worse than a slightly generous definition of "seen
+it".
+
+**Messages live 90 days, purged by the same hourly sweep that already existed
+for reminders** (`api/cron/reminders`), not a new cron. The sweep already ran
+every hour for a reason unrelated to chat — "8am" being a different instant
+per timezone — so riding it costs one more `deleteMany` rather than a second
+scheduled function to keep in step with `CRON_SECRET` and Vercel Hobby's one-
+cron-a-day cap. Clearing hides a message immediately; this is where a message
+actually stops existing, same relationship as the old note's read-filter versus
+its cron delete.
+
+**The push tag is per-conversation, reversing the old notes' choice on
+purpose.** A note's push was not scoped this way, so a burst of five stacked as
+five separate cards. `sendMessageAction` tags with `chat-${link.id}`: a burst of
+messages from the same person now collapses to one banner showing the latest,
+which is what a chat notification should do and what a scattered feed of
+one-off nudges should not.
+
+**`Encouragement` is scheduled to drop, but not in this release.** The table is
+orphaned the moment this deploys — nothing in the app writes or reads it — but
+`DROP TABLE` waits for a second, separate migration applied only after
+`npx vercel deploy --prod` is confirmed live. Same reasoning as the
+`shareMeals` column drop above: the old build stays reachable (a rollback, a
+stale tab) for a window after `migrate deploy` and before the new code is
+actually serving, and dropping the table inside that window would break it.
+Until the second migration lands, the table sits there unused and harmless —
+cheaper than getting the two-release order wrong twice.
 
 ### Identity and credentials
 
