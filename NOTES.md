@@ -42,8 +42,10 @@ small celebrations when a milestone or a calorie target is met.
 - Live: <https://helia-plum.vercel.app>
 - Five tabs: **Weight** (`/`), **Calendar**, **Meals**, **Friends**, **Settings**
 
-**State of play, 2026-08-10.** Seven accounts, five of them testers. `main` is
-pushed. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
+**State of play, 2026-08-12.** Six accounts: the owner plus Jerry, Matthew,
+Saleh, fatboy and Nyan Lin Htet. Spider Man and Nahian were deleted on
+2026-08-12 — no longer testing, on the owner's instruction (one weigh-in and
+two friendship rows cascaded with them). `main` is pushed. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
 logged, the calendar —
 which now shows each day's reading — and Apple Health import, meals with Gemini
 estimation and one-tap reuse of a past meal, friends with account-wide weight
@@ -65,7 +67,7 @@ that: fast, quiet, few taps, works one-handed.
 ## Who it is for, and how they work
 
 Built by its owner, with a handful of invited testers using it — currently
-Jerry plus Matthew, Saleh, Spider Man, fatboy and Nahian — seven accounts in
+Jerry plus Matthew, Saleh, fatboy and Nyan Lin Htet — six accounts in
 all. Anyone with an account is meant to be there. Preferences
 observed over the course of building it — these are not guesses, they are things
 that were said or that were changed after feedback:
@@ -1351,24 +1353,14 @@ Duolingo, Apple Fitness), not yet implemented:
 
 **Needs the owner to act:**
 
-- **The username/password migration is applied but not deployed.**
-  `20260810200000_usernames_and_passwords` ran against production on
-  2026-08-10; all seven accounts are sitting at `setupComplete = false` with a
-  null username. This is deliberately invisible to the live Aug-6 build, which
-  knows none of those columns — but the moment the new code deploys, **every
-  tester lands on `/setup` at their next visit** and has to pick a username and
-  a password. Their existing PIN still gets them in. Tell them before deploying,
-  not after.
-- **Retire the legacy handle login once they are all through.** `loginAction`
-  falls back to `handle` lookup, and `usernameTaken()` has to check `handle` as
-  well to keep that unambiguous. Both simplify away when
-  `SELECT count(*) FROM "User" WHERE username IS NULL` reaches zero.
-- **Deploy.** As of 2026-08-10 production is still serving the Aug-6 build.
-  `npx vercel deploy --prod` failed with *"Not authorized"* even though the same
-  token reads fine (`whoami`, `project ls`, `project inspect` all work) and the
-  project id in `.vercel/project.json` matches the real project under
-  `vthecookie-6604's projects`. Try `npx vercel login` first. Everything from
-  2026-08-10 is committed and pushed but **not live**.
+- **Retire the legacy handle login once Saleh is through `/setup`.** Checked
+  against production on 2026-08-12: five of six accounts have a username;
+  **only Saleh** is still at `setupComplete = false`, signing in with the
+  legacy handle + PIN. `loginAction` falls back to `handle` lookup, and
+  `usernameTaken()` has to check `handle` as well to keep that unambiguous.
+  Both simplify away when `SELECT count(*) FROM "User" WHERE username IS NULL`
+  reaches zero. Nothing forces the upgrade — the PIN works indefinitely by
+  design — so a nudge to Saleh is the lever, not code.
 - **One lost message.** "Nice work today 👏", sent 5:39am ET Aug 6, direction
   unknown. Will be restored once the owner says who sent it.
 
