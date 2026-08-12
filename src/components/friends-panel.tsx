@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import {
   requestFriendAction,
   respondToRequestAction,
   removeFriendAction,
-  sendEncouragementAction,
   setMealSharingAction,
   type FriendResult,
 } from "@/app/actions/friends";
@@ -16,27 +16,6 @@ import { formatDayShort } from "@/lib/dates";
 import { formatDelta, fromLbs, type Units } from "@/lib/units";
 
 const INITIAL: FriendResult = { ok: false };
-
-/**
- * The quick notes follow the friend's last move, because the same sentence is
- * congratulation on one morning and salt in the wound on another. A tester
- * asked for this: "Nice work today" went because nobody talks like that, and
- * offering it to someone whose weight went up made it worse.
- *
- * This does not contradict "a friend's gain is not scored" — nothing here
- * renders the direction or judges it. It only decides which three sentences
- * are on hand, and the box stays free text either way.
- */
-const QUICK_DOWN = ["Proud of you", "Look at you go", "Keep it up 🔥"];
-const QUICK_UP = ["Life has its ups and downs", "Keep going", "You've got this"];
-/** No shared weight, or no earlier reading to compare against — say something
- *  that is true whichever way the morning went. */
-const QUICK_STEADY = ["Proud of you", "Keep going", "Keep the streak going 🔥"];
-
-function quickNotes(changeLbs: number | null): string[] {
-  if (changeLbs === null || changeLbs === 0) return QUICK_STEADY;
-  return changeLbs < 0 ? QUICK_DOWN : QUICK_UP;
-}
 
 export function FriendsPanel({
   friends,
@@ -156,24 +135,11 @@ function FriendCard({
   units: Units;
   index: number;
 }) {
-  const [state, sendAction, sending] = useActionState(
-    sendEncouragementAction,
-    INITIAL,
-  );
-  const [body, setBody] = useState("");
   // Optimistic, like the settings toggles: a tap answers immediately and the
   // server is the record rather than the render.
   const [shareFood, setShareFood] = useState(friend.iShareMeals);
   const [, startSharing] = useTransition();
   const removeRef = useRef<HTMLDialogElement>(null);
-
-  // Emptying the box is the receipt. Leaving the text sitting there reads as
-  // "nothing happened", and the obvious response to that is to press Send
-  // again. `useActionState` hands back a fresh object per submission, so this
-  // fires once per send rather than only when the message changes.
-  useEffect(() => {
-    if (state.ok) setBody("");
-  }, [state]);
 
   return (
     <li
@@ -279,48 +245,26 @@ function FriendCard({
         </div>
       )}
 
-      <form action={sendAction} className="mt-3">
-        <input type="hidden" name="toId" value={friend.id} />
-        <div className="flex flex-wrap gap-2">
-          {quickNotes(friend.changeLbs).map((q) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => setBody(q)}
-              className="chip btn-soft"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-        <div className="mt-2 flex gap-2">
-          <input
-            name="body"
-            type="text"
-            maxLength={200}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={`Send ${friend.name} a note`}
-            aria-label={`Encouragement for ${friend.name}`}
-            className="min-w-0 flex-1 rounded-xl bg-surface-sunk px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
-          />
-          <button
-            type="submit"
-            disabled={sending || body.trim() === ""}
-            className="btn btn-primary !rounded-full shrink-0 !py-2"
-          >
-            {sending ? "…" : "Send"}
-          </button>
-        </div>
-        {(state.error || state.message) && (
-          <p
-            role="status"
-            className={`mt-2 text-xs ${state.error ? "text-up" : "text-ink-muted"}`}
-          >
-            {state.error ?? state.message}
-          </p>
+      {/* Into the conversation. A row, not the card header — the header is a
+          <summary> for the week chart and nothing interactive may sit in it. */}
+      <Link
+        href={`/friends/${friend.id}`}
+        className="mt-3 flex items-center gap-2 rounded-xl bg-surface-sunk px-3 py-2"
+      >
+        <span className="min-w-0 flex-1 truncate text-sm text-ink-muted">
+          {friend.lastMessage
+            ? `${friend.lastMessage.fromMe ? "You: " : ""}${friend.lastMessage.body}`
+            : `Message ${friend.name}`}
+        </span>
+        {friend.unread > 0 && (
+          <span className="tnum shrink-0 rounded-full bg-ink px-2 py-0.5 text-xs font-bold text-ground">
+            {friend.unread}
+          </span>
         )}
-      </form>
+        <span aria-hidden className="shrink-0 text-ink-faint">
+          ›
+        </span>
+      </Link>
 
       {/* Per friend, not per account: this is the one thing people wanted to
           answer differently for different people. It sits on their card so the
