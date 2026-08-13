@@ -226,6 +226,33 @@ export async function syncTimezoneAction(timezone: string): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+/** The one write path for a profile picture. Strict about what it accepts,
+ *  because the value is re-rendered as an <img src> for other people:
+ *  JPEG data URL only, hard length cap, or null to remove. */
+export async function setAvatarAction(
+  dataUrl: string | null,
+): Promise<{ ok: boolean; error?: string }> {
+  const me = await requireUser();
+
+  if (dataUrl !== null) {
+    if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(dataUrl)) {
+      return { ok: false, error: "That does not look like a photo." };
+    }
+    if (dataUrl.length > 100_000) {
+      return { ok: false, error: "That photo is too large." };
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: me.id },
+    data: { avatar: dataUrl },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/friends");
+  return { ok: true };
+}
+
 /**
  * Record that a milestone has been congratulated, so it is not shown again.
  *

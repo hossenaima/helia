@@ -8,6 +8,8 @@ import { mealNutrition } from "@/lib/nutrition";
 export type FriendSummary = {
   id: string;
   name: string;
+  /** Their profile picture, if they set one. */
+  avatar: string | null;
   /** Most recent weigh-in, in pounds. Null when never logged, or not shared. */
   latestLbs: number | null;
   latestDate: string | null;
@@ -54,6 +56,7 @@ export type FriendSummary = {
 const FRIEND_FIELDS = {
   id: true,
   name: true,
+  avatar: true,
   timezone: true,
   shareWeight: true,
 } as const;
@@ -163,6 +166,7 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
     return {
       id: other.id,
       name: other.name,
+      avatar: other.avatar,
       latestLbs: other.shareWeight ? (latest?.weightLbs ?? null) : null,
       latestDate: other.shareWeight ? (latest?.date ?? null) : null,
       changeLbs:

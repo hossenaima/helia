@@ -33,6 +33,12 @@ model User {
   /// accounts that predate it, which is exactly the set /setup exists to fix.
   username String? @unique
 
+  /// Profile picture: a small square JPEG as a data URL (~15KB, 256px,
+  /// circle-cropped in the browser). On the row rather than in a bucket —
+  /// account deletion wipes it for free and there is no URL to sign or
+  /// revoke. Validated strictly on write; it is re-rendered as an <img src>.
+  avatar String?
+
   /// scrypt hash of whatever secret this account currently signs in with.
   ///
   /// The column names say "pin" because that is all this held until usernames

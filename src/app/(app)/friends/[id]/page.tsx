@@ -27,8 +27,8 @@ export default async function ChatPage({
       ],
     },
     include: {
-      requester: { select: { id: true, name: true, shareWeight: true } },
-      addressee: { select: { id: true, name: true, shareWeight: true } },
+      requester: { select: { id: true, name: true, shareWeight: true, avatar: true } },
+      addressee: { select: { id: true, name: true, shareWeight: true, avatar: true } },
     },
   });
   // Not friends (or a forged id): nothing to show. Back to the list.
