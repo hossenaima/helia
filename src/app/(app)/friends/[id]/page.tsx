@@ -65,7 +65,12 @@ export default async function ChatPage({
 
   return (
     <>
-      <div className="flex items-baseline justify-between gap-3">
+      {/* Sticky under the app header (top-[4.5rem] matches its own
+          scroll-padding-top in globals.css) so the way out of a long,
+          auto-scrolled chat is never off-screen. bg-ground plus the negative
+          margin/padding pair mirrors main's own px-5/md:px-6 so the surface
+          covers edge-to-edge instead of leaving a gap either side. */}
+      <div className="sticky top-[4.5rem] z-10 -mx-5 flex items-baseline justify-between gap-3 bg-ground px-5 py-2 md:-mx-6 md:px-6">
         <Link href="/friends" className="eyebrow shrink-0">
           ‹ Friends
         </Link>

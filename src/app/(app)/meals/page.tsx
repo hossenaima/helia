@@ -101,7 +101,11 @@ export default async function MealsPage(props: PageProps<"/meals">) {
 
           <ul className="mt-3 space-y-3">
             {meals.map((meal, i) => (
-              <MealCard key={meal.id} meal={meal} index={i} />
+              // Key carries the item count so a save that changes the items
+              // remounts the card and reseeds its draft state — meal.id alone
+              // never changes, so useState's initializers only ran once and a
+              // reopened Edit kept showing the pre-save items and total.
+              <MealCard key={`${meal.id}:${meal.items.length}`} meal={meal} index={i} />
             ))}
           </ul>
         </section>

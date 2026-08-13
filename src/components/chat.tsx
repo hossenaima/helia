@@ -101,7 +101,10 @@ export function Chat({
             </p>
           </li>
         ))}
-        <li ref={endRef} aria-hidden className="list-none" />
+        {/* scroll-mb-16 adds to html's scroll-padding-bottom (5rem) so a
+            taller composer (wrapped quick chips push it past that) still
+            clears the newest message after scrollIntoView. */}
+        <li ref={endRef} aria-hidden className="list-none scroll-mb-16" />
       </ul>
 
       <form

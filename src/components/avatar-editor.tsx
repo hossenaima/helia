@@ -245,7 +245,7 @@ export function AvatarEditor({ current, name }: { current: string | null; name: 
                   type="file"
                   accept="image/*"
                   onChange={handleFile}
-                  className="hidden"
+                  className="sr-only"
                 />
               </label>
               {current && (
