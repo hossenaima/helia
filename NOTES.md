@@ -54,9 +54,11 @@ exists, orphaned, awaiting its post-deploy DROP in a later release. A same-day
 follow-up added pinch-zoom lock, a full-screen chat immersion (composer owns
 the bottom edge, the tab bar steps aside inside a conversation), profile-
 picture avatars, and meal rename/add-item editing — see
-[Immersion & avatars](#immersion--avatars) — browser-verified end to end on
-`immersion`; the avatar column's migration is already applied to production,
-merge and deploy of the code follow this note. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
+[Immersion & avatars](#immersion--avatars) — browser-verified end to end,
+**deployed to production the same evening** (post-deploy smoke: all five
+tabs, zoom-lock meta, avatar section, account deletion). One check remains
+on the owner: the fixed chat composer with the iOS keyboard up, on a real
+iPhone, before the next announcement email goes out. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
 logged, the calendar —
 which now shows each day's reading — and Apple Health import, meals with Gemini
 estimation and one-tap reuse of a past meal, friends with account-wide weight
