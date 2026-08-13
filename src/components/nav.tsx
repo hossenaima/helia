@@ -36,6 +36,11 @@ export function Nav({ waiting = 0 }: { waiting?: number }) {
   const [heading, setHeading] = useOptimistic(pathname);
   const litIndex = LINKS.findIndex((l) => isActive(heading, l.href));
 
+  // A conversation is full-screen: the composer owns the bottom edge and the
+  // back link is the exit, like every messenger. Only /friends/<id> — the
+  // Friends list itself keeps its tabs.
+  if (/^\/friends\/.+/.test(pathname)) return null;
+
   return (
     <nav
       aria-label="Sections"

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { formatMomentIn } from "@/lib/dates";
-import { Chat } from "@/components/chat";
+import { Chat, ClearChat } from "@/components/chat";
 
 export const dynamic = "force-dynamic";
 
@@ -71,8 +71,7 @@ export default async function ChatPage({
         <h1 className="min-w-0 flex-1 truncate text-center font-bold">
           {friend.name}
         </h1>
-        {/* Balanced spacer so the name centres; Clear lives in <Chat>. */}
-        <span className="eyebrow invisible shrink-0">‹ Friends</span>
+        <ClearChat friendId={friend.id} friendName={friend.name} />
       </div>
 
       <Chat

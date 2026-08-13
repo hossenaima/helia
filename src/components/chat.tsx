@@ -47,7 +47,6 @@ export function Chat({
   const router = useRouter();
   const [state, sendAction, sending] = useActionState(sendMessageAction, INITIAL);
   const [body, setBody] = useState("");
-  const clearRef = useRef<HTMLDialogElement>(null);
   const endRef = useRef<HTMLLIElement>(null);
 
   // Opening the chat is reading it. Idempotent on the server, so firing on
@@ -77,7 +76,7 @@ export function Chat({
 
   return (
     <>
-      <ul className="mt-5 space-y-2" aria-label={`Messages with ${friendName}`}>
+      <ul className="mt-5 space-y-2 pb-36" aria-label={`Messages with ${friendName}`}>
         {messages.length === 0 && (
           <li className="list-none">
             <p className="text-sm text-ink-muted">
@@ -107,53 +106,69 @@ export function Chat({
 
       <form
         action={sendAction}
-        className="sticky bottom-[calc(6.75rem+env(safe-area-inset-bottom))] mt-5"
+        className="glass fixed inset-x-0 bottom-0 z-20 !rounded-none px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3"
       >
-        <input type="hidden" name="friendId" value={friendId} />
-        <div className="flex flex-wrap gap-2">
-          {quickNotes(changeLbs).map((q) => (
+        <div className="mx-auto max-w-2xl">
+          <input type="hidden" name="friendId" value={friendId} />
+          <div className="flex flex-wrap gap-2">
+            {quickNotes(changeLbs).map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => setBody(q)}
+                className="chip btn-soft"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <input
+              name="body"
+              type="text"
+              maxLength={500}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder={`Message ${friendName}`}
+              aria-label={`Message ${friendName}`}
+              className="min-w-0 flex-1 rounded-xl bg-surface-sunk px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
+            />
             <button
-              key={q}
-              type="button"
-              onClick={() => setBody(q)}
-              className="chip btn-soft"
+              type="submit"
+              disabled={sending || body.trim() === ""}
+              className="btn btn-primary !rounded-full shrink-0 !py-2"
             >
-              {q}
+              {sending ? "…" : "Send"}
             </button>
-          ))}
+          </div>
+          {state.error && (
+            <p role="status" className="mt-2 text-xs text-up">
+              {state.error}
+            </p>
+          )}
         </div>
-        <div className="card mt-2 flex gap-2 !p-2">
-          <input
-            name="body"
-            type="text"
-            maxLength={500}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={`Message ${friendName}`}
-            aria-label={`Message ${friendName}`}
-            className="min-w-0 flex-1 rounded-xl bg-surface-sunk px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
-          />
-          <button
-            type="submit"
-            disabled={sending || body.trim() === ""}
-            className="btn btn-primary !rounded-full shrink-0 !py-2"
-          >
-            {sending ? "…" : "Send"}
-          </button>
-        </div>
-        {state.error && (
-          <p role="status" className="mt-2 text-xs text-up">
-            {state.error}
-          </p>
-        )}
       </form>
+    </>
+  );
+}
 
+export function ClearChat({
+  friendId,
+  friendName,
+}: {
+  friendId: string;
+  friendName: string;
+}) {
+  const clearRef = useRef<HTMLDialogElement>(null);
+
+  return (
+    <>
       <button
         type="button"
         onClick={() => clearRef.current?.showModal()}
-        className="eyebrow mt-6 transition-colors hover:!text-up"
+        className="eyebrow shrink-0 transition-colors hover:!text-up"
       >
-        Clear chat
+        Clear
       </button>
 
       <dialog ref={clearRef} className="confirm" aria-labelledby="clear-chat">
