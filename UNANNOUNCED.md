@@ -25,6 +25,35 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
+*Nothing — everything shipped so far was announced on 2026-08-12.*
+
+## Already announced
+
+### 2026-08-12 — "Helia update: photo meals, chats, and profile pictures"
+
+Sent to everyone reachable: email to Jerry and the owner (the only two
+addresses on file), push to the owner, Jerry, fatboy and Matthew (6
+devices). **Saleh and Nyan Lin Htet got nothing** — no email, no push —
+and will find the features by opening the app.
+
+Condensed to the five big features on the owner's instruction; zoom lock,
+chat layout polish, the delete-× removal, the password-rule fix and
+typed-calorie scaling were folded in or left out as rudimentary.
+
+- Photograph your meal: photo → editable itemised estimate; words beat the
+  picture; typed totals win; photo never stored
+- Notes became chats: 90-day history, notifications, one-sided clear
+- Profile pictures: crop in Settings, shown on friend cards, initial as
+  fallback
+- Edit a logged meal: rename, edit description, add missed rows (typed =
+  exact)
+- Streak corrections: only logged days count, one day of grace, freezes;
+  "some streaks read lower — that is the correction, not a bug"
+- Closing line: tabs faster with a soft fade
+
+<details>
+<summary>The retired per-date shipping lists, kept for the record</summary>
+
 *As of 2026-08-12. Deployed and live.*
 
 - **Switching tabs is 2–3× faster, and smoother.** The app's server moved
@@ -108,7 +137,7 @@ node scripts/announce.mjs "…" "…" --send                                # to
   number rather than to a guess. A number you typed is treated as exact, so it
   no longer shows a ± range.
 
-## Already announced
+</details>
 
 ### 2026-08-10 — "Helia update: usernames, passwords, and a delete button"
 
