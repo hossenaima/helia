@@ -40,6 +40,7 @@ export type SessionUser = {
   calorieTarget: number | null;
   proteinTargetG: number | null;
   fiberTargetG: number | null;
+  avatar: string | null;
 };
 
 // --- PIN hashing -----------------------------------------------------------
@@ -131,6 +132,7 @@ export const currentUser = cache(async function currentUser(): Promise<SessionUs
     calorieTarget: user.calorieTarget,
     proteinTargetG: user.proteinTargetG,
     fiberTargetG: user.fiberTargetG,
+    avatar: user.avatar,
   };
 });
 

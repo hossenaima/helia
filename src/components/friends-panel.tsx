@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/friends";
 import type { FriendSummary } from "@/lib/friends";
 import { FriendWeekChart } from "@/components/friend-week-chart";
+import { Avatar } from "@/components/avatar";
 import { Toggle } from "@/components/sharing-controls";
 import { formatDayShort } from "@/lib/dates";
 import { formatDelta, fromLbs, type Units } from "@/lib/units";
@@ -154,11 +155,12 @@ function FriendCard({
       <details className="group">
         <summary
           className="
-            -m-1 flex cursor-pointer list-none items-baseline justify-between
+            -m-1 flex cursor-pointer list-none items-center justify-between
             gap-3 rounded-lg p-1
             [&::-webkit-details-marker]:hidden
           "
         >
+          <Avatar src={friend.avatar} name={friend.name} size={32} />
           <p className="min-w-0 flex-1 truncate font-bold">{friend.name}</p>
           <span className="tnum shrink-0 text-sm">
             {friend.latestLbs !== null

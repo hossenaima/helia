@@ -12,6 +12,7 @@ import {
 } from "@/components/settings-forms";
 import { DeleteAccount } from "@/components/delete-account";
 import { NotificationSettings } from "@/components/notification-settings";
+import { AvatarEditor } from "@/components/avatar-editor";
 import { logoutAction } from "@/app/actions/auth";
 import { prisma } from "@/lib/db";
 
@@ -76,6 +77,11 @@ export default async function SettingsPage() {
       <section className="mt-10">
         <h2 className="eyebrow">Password</h2>
         <PasswordChangeForm />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="eyebrow">Profile picture</h2>
+        <AvatarEditor current={user.avatar} name={user.name} />
       </section>
 
       <section className="mt-10">

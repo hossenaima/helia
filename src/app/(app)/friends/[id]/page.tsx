@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { formatMomentIn } from "@/lib/dates";
 import { Chat, ClearChat } from "@/components/chat";
+import { Avatar } from "@/components/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -68,9 +69,10 @@ export default async function ChatPage({
         <Link href="/friends" className="eyebrow shrink-0">
           ‹ Friends
         </Link>
-        <h1 className="min-w-0 flex-1 truncate text-center font-bold">
-          {friend.name}
-        </h1>
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+          <Avatar src={friend.avatar} name={friend.name} size={28} />
+          <h1 className="min-w-0 truncate font-bold">{friend.name}</h1>
+        </div>
         <ClearChat friendId={friend.id} friendName={friend.name} />
       </div>
 
