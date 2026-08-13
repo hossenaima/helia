@@ -1358,6 +1358,19 @@ Two traps found by measuring, either of which would have shipped broken:
   A `once` scroll listener backstops it: on this tab, anybody scrolling is
   heading for the chart.
 
+**The function lives in sfo1, next to the database — not next to the users.**
+`vercel.json` pins `regions: ["sfo1"]` (2026-08-12). A tab render is a 3–4
+stage query waterfall (auth → counts → page queries), and with compute in
+iad1 each stage crossed the country to Supabase us-west-1 at ~70ms; the
+user→function hop is paid once, the DB hops per stage. Colocating with the
+database, measured signed-in on production with the same account and method:
+/ 383→158ms, /calendar 305→131, /meals 444→121, /friends 350→125,
+/settings 270→188 (medians of 5). **If the database ever moves east, move
+this pin with it** — the rule is "function next to database", not "sfo1".
+This also supersedes the old open item about migrating Supabase east: the
+colocation win is had without touching a production database that has no
+point-in-time recovery.
+
 **`staleTimes.dynamic: 30`** lets a tab already visited come back from the
 client cache: repeat tab switches went ~355ms → ~275ms. Thirty seconds, not
 more, for the same reason the service worker caches nothing — and your own
@@ -1381,7 +1394,13 @@ wanted here was already paid for:
 
 - **Tab crossfades** — React `<ViewTransition>` via `experimental.viewTransition`
   and `(app)/template.tsx`. A template remounts per navigation where a layout
-  does not, which is what gives React two states to fade between.
+  does not, which is what gives React two states to fade between. **Both
+  sides must be named**: the first cut animated only `enter` with
+  `default="none"`, so the old tab vanished in one frame and the owner read
+  the switch as having no animation at all (2026-08-12). The classes
+  (`tab-enter`/`tab-exit`, in globals.css, unlayered because VT pseudos are
+  top-layer) do a 120ms fade-out and a 200ms fade-in with a 6px rise —
+  vertical only; sideways would claim an order five peer tabs do not have.
 - **The lit tab marker** — one absolutely positioned element translated by
   index, which is why tabs are equal width at every size: nothing has to be
   measured. Five peer tabs have no forward or back, so a directional slide would

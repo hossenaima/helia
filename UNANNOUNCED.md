@@ -27,6 +27,12 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 *As of 2026-08-12. Deployed and live.*
 
+- **Switching tabs is 2–3× faster, and smoother.** The app's server moved
+  next to its database, which cut the wait when opening a tab from roughly a
+  third of a second to near-instant — and pages now fade gently into each
+  other instead of flashing. (If you have Reduce Motion on, the app respects
+  it and skips the animation.)
+
 - **Edit a logged meal — name, description, and what got missed.** Open a
   meal's working and tap Edit: the name and the description you typed are
   both editable now, so a photo-read or hand-typed entry can be fixed
