@@ -60,8 +60,12 @@ export function MealCard({
   );
   const [removed, setRemoved] = useState<string[]>([]);
   const [nameDraft, setNameDraft] = useState(meal.name);
-  const [addName, setAddName] = useState("");
-  const [addCalories, setAddCalories] = useState("");
+  const [noteDraft, setNoteDraft] = useState(meal.note);
+  // As many new rows as the estimate missed things — an empty row is simply
+  // not saved, so a stray tap on "Add a row" costs nothing.
+  const [additions, setAdditions] = useState<
+    Array<{ name: string; calories: string }>
+  >([]);
 
   const n = mealNutrition(meal);
   const precision = mealPrecision(meal);
@@ -93,14 +97,19 @@ export function MealCard({
 
   function save() {
     startSaving(async () => {
-      if (nameDraft.trim() !== meal.name) {
-        await renameMealAction({ mealId: meal.id, name: nameDraft });
+      if (nameDraft.trim() !== meal.name || noteDraft.trim() !== meal.note) {
+        await renameMealAction({
+          mealId: meal.id,
+          name: nameDraft,
+          note: noteDraft,
+        });
       }
-      if (addName.trim()) {
+      for (const row of additions) {
+        if (!row.name.trim()) continue;
         await addMealItemAction({
           mealId: meal.id,
-          name: addName,
-          calories: Number(addCalories) || 0,
+          name: row.name,
+          calories: Number(row.calories) || 0,
         });
       }
       await updateMealItemsAction({
@@ -117,8 +126,7 @@ export function MealCard({
       });
       setEditing(false);
       setRemoved([]);
-      setAddName("");
-      setAddCalories("");
+      setAdditions([]);
     });
   }
 
@@ -240,6 +248,17 @@ export function MealCard({
                 onChange={(e) => setNameDraft(e.target.value)}
                 className="w-full rounded-lg bg-surface-sunk px-3 py-2 text-sm font-bold focus:outline-2 focus:outline-trace"
               />
+              {/* The description is the person's own words about their food,
+                  so it is theirs to change. Editing it never re-runs the
+                  estimator — the items below stand regardless. */}
+              <textarea
+                aria-label="Meal description"
+                rows={2}
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder="description"
+                className="mt-1.5 w-full resize-none rounded-lg bg-surface-sunk px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
+              />
 
               <p className="eyebrow mt-4">Ate less than estimated?</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -322,30 +341,67 @@ export function MealCard({
                 })}
               </ul>
 
-              <div className="mt-4 flex items-center gap-2">
-                <input
-                  type="text"
-                  aria-label="New item name"
-                  placeholder="what did the estimate miss?"
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  className="min-w-0 flex-1 rounded-lg bg-surface-sunk px-2 py-1.5 text-sm placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
-                />
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  aria-label="Calories for new item"
-                  placeholder="kcal"
-                  value={addCalories}
-                  onChange={(e) => setAddCalories(e.target.value)}
-                  className="tnum w-20 rounded-lg bg-surface-sunk px-2 py-1.5 text-right text-sm font-semibold placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
-                />
-              </div>
+              {additions.map((row, i) => (
+                <div key={i} className="mt-2 flex items-center gap-2 first-of-type:mt-4">
+                  <input
+                    type="text"
+                    aria-label={`Name for new item ${i + 1}`}
+                    placeholder="component"
+                    value={row.name}
+                    onChange={(e) =>
+                      setAdditions((rows) =>
+                        rows.map((r, j) =>
+                          j === i ? { ...r, name: e.target.value } : r,
+                        ),
+                      )
+                    }
+                    className="min-w-0 flex-1 rounded-lg bg-surface-sunk px-2 py-1.5 text-sm placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
+                  />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    aria-label={`Calories for new item ${i + 1}`}
+                    placeholder="kcal"
+                    value={row.calories}
+                    onChange={(e) =>
+                      setAdditions((rows) =>
+                        rows.map((r, j) =>
+                          j === i ? { ...r, calories: e.target.value } : r,
+                        ),
+                      )
+                    }
+                    className="tnum w-20 rounded-lg bg-surface-sunk px-2 py-1.5 text-right text-sm font-semibold placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAdditions((rows) => rows.filter((_, j) => j !== i))
+                    }
+                    aria-label={`Remove new item ${i + 1}`}
+                    className="px-1 text-lg leading-none text-ink-faint transition-colors hover:text-up"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setAdditions((rows) => [...rows, { name: "", calories: "" }])
+                }
+                className="mt-3 w-full rounded-lg border border-dashed border-rule px-3 py-1.5 text-sm text-ink-muted transition-colors hover:text-ink"
+              >
+                + Add a row
+              </button>
 
               <p className="tnum mt-3 text-sm font-bold">
                 New total{" "}
                 {Math.round(
-                  draftTotal + (Number(addCalories) || 0),
+                  draftTotal +
+                    additions.reduce(
+                      (sum, r) => sum + (Number(r.calories) || 0),
+                      0,
+                    ),
                 ).toLocaleString()}{" "}
                 kcal
               </p>
@@ -364,8 +420,8 @@ export function MealCard({
                       })),
                     );
                     setNameDraft(meal.name);
-                    setAddName("");
-                    setAddCalories("");
+                    setNoteDraft(meal.note);
+                    setAdditions([]);
                   }}
                   className="flex-1 rounded-full bg-surface-sunk px-4 py-2 text-sm font-bold transition-opacity hover:opacity-80"
                 >

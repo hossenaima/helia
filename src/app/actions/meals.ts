@@ -302,11 +302,13 @@ export async function updateMealItemsAction(input: {
 
 /** A rename is a label change and nothing else: the items, their calories
  *  and the ± band stay untouched, and the reuse list follows the new name.
- *  `note` is deliberately NOT touched — it is the verbatim text the
- *  estimate was based on, and rewriting history helps nobody. */
+ *  The description (`note`) is editable too, on the owner's request
+ *  (2026-08-12) — it is their words about their food. It never re-runs the
+ *  estimator; the items stand regardless of what the text now says. */
 export async function renameMealAction(input: {
   mealId: string;
   name: string;
+  note?: string;
 }) {
   const me = await requireUser();
   const name = input.name.trim().slice(0, 60);
@@ -314,7 +316,12 @@ export async function renameMealAction(input: {
 
   const { count } = await prisma.meal.updateMany({
     where: { id: input.mealId, userId: me.id },
-    data: { name },
+    data: {
+      name,
+      ...(input.note !== undefined
+        ? { note: input.note.trim().slice(0, 500) }
+        : {}),
+    },
   });
   if (count === 0) return { ok: false as const, error: "No such meal." };
 

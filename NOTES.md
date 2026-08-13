@@ -1040,14 +1040,20 @@ position and a plain `<input type="range">` for zoom — the same two degrees of
 freedom a pinch gesture gives, built from what the platform already has rather
 than a gesture-recognition dependency for one screen.
 
-**A meal rename touches only the name; `note` stays the estimate's original
-record.** `renameMealAction` writes `Meal.name` and nothing else — `note` is
-what the estimator (or the person) described eating, and relabeling a
-photo-read or hand-typed meal must not rewrite the account of what was
-estimated from. **Items added afterward are `source: "manual"`,
-`precision: "exact"`** — the same treatment a typed calorie total already gets
-elsewhere (see [Meals](#meals)): a number someone typed in to cover what the
-estimate missed is not a guess, and does not get a ± range.
+**Editing a meal touches its words, never its numbers.** `renameMealAction`
+writes `Meal.name` and — since 2026-08-12, on the owner's request — `note` as
+well: the description is the person's own words about their food, and it is
+theirs to change. What editing the text never does is re-run the estimator;
+the items and their calories stand regardless of what the description now
+says. (An earlier version of this decision kept `note` immutable as "the
+estimate's original record" — the owner overrode that: being able to fix
+your own description matters more than preserving the estimator's input.)
+**Items added afterward are `source: "manual"`, `precision: "exact"`** — the
+same treatment a typed calorie total already gets elsewhere (see
+[Meals](#meals)): a number someone typed in to cover what the estimate missed
+is not a guess, and does not get a ± range. The add-item UI is repeatable
+rows ("+ Add a row"), not one slot — an estimate can miss several things, and
+an empty row is simply not saved.
 
 ---
 
