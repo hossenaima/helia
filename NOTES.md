@@ -50,7 +50,13 @@ chat the same day — see [Chat](#chat) — browser-verified end to end and
 **deployed to production on 2026-08-12** (top-up INSERT run before and after
 the deploy per the runbook: 3 in-window notes carried across, 0 stragglers;
 all five signed-in tabs confirmed live). The `Encouragement` table still
-exists, orphaned, awaiting its post-deploy DROP in a later release. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
+exists, orphaned, awaiting its post-deploy DROP in a later release. A same-day
+follow-up added pinch-zoom lock, a full-screen chat immersion (composer owns
+the bottom edge, the tab bar steps aside inside a conversation), profile-
+picture avatars, and meal rename/add-item editing — see
+[Immersion & avatars](#immersion--avatars) — browser-verified end to end on
+`immersion`; the avatar column's migration is already applied to production,
+merge and deploy of the code follow this note. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
 logged, the calendar —
 which now shows each day's reading — and Apple Health import, meals with Gemini
 estimation and one-tap reuse of a past meal, friends with account-wide weight
@@ -995,6 +1001,51 @@ hatch. It re-hashes with the same scrypt parameters as `src/lib/auth.ts`, and
 carries a copy of the minimum length from `src/lib/credentials.ts`; all three
 must stay in step or a reset password will not verify, or will be one the form
 would have refused.
+
+### Immersion & avatars
+
+**The app no longer pinch-zooms, and that is the owner's accessibility call,
+stated rather than assumed.** `viewport` in `src/app/layout.tsx` sets
+`maximumScale: 1, userScalable: false`. Locking zoom is normally a thing to
+avoid — it can strand someone who needs to enlarge text — but here it was asked
+for explicitly, so the installed-app feel wins over the default caution.
+
+**The tab bar hides only inside a conversation, and only there.** `Nav` in
+`src/components/nav.tsx` tests the pathname — `/^\/friends\/.+/` — and returns
+`null` on a match; every other route keeps its tabs. The reasoning is in the
+code: *"A conversation is full-screen: the composer owns the bottom edge and
+the back link is the exit, like every messenger."* The composer form
+(`src/components/chat.tsx`) is what actually claims that edge — `fixed
+inset-x-0 bottom-0` — so the two only look coordinated because the nav gets out
+of the one place a fixed-bottom composer would otherwise collide with it.
+
+**Avatars live on the `User` row as strictly-validated JPEG data URLs, not in a
+bucket.** `avatar String?` in `prisma/schema.prisma`, ~15KB typical (256px,
+circle-cropped client-side before upload). The tradeoff is explicit in the
+schema comment: no bucket means no signed URL to generate or revoke, and
+**account deletion wipes the photo for free** — it is a column on the row that
+gets `DELETE`d, not a file with a lifecycle of its own to keep in step. The
+write path, `setAvatarAction` in `src/app/actions/settings.ts`, is strict
+because the value is trusted enough to be re-rendered as another person's
+`<img src>`: the regex `^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$` accepts
+JPEG only, and a hard `dataUrl.length > 100_000` cap (characters of the data
+URL, not bytes — a ceiling, not the ~15KB expected size) rejects anything
+that slipped past client-side downscaling.
+
+**The crop is drag-and-slider, not pinch.** `AvatarEditor` in
+`src/components/avatar-editor.tsx` reads Pointer Events on the stage for
+position and a plain `<input type="range">` for zoom — the same two degrees of
+freedom a pinch gesture gives, built from what the platform already has rather
+than a gesture-recognition dependency for one screen.
+
+**A meal rename touches only the name; `note` stays the estimate's original
+record.** `renameMealAction` writes `Meal.name` and nothing else — `note` is
+what the estimator (or the person) described eating, and relabeling a
+photo-read or hand-typed meal must not rewrite the account of what was
+estimated from. **Items added afterward are `source: "manual"`,
+`precision: "exact"`** — the same treatment a typed calorie total already gets
+elsewhere (see [Meals](#meals)): a number someone typed in to cover what the
+estimate missed is not a guess, and does not get a ± range.
 
 ---
 
