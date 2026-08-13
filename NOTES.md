@@ -1034,6 +1034,12 @@ JPEG only, and a hard `dataUrl.length > 100_000` cap (characters of the data
 URL, not bytes — a ceiling, not the ~15KB expected size) rejects anything
 that slipped past client-side downscaling.
 
+**Avatars show on the friend card and in Settings — not in the chat.** The
+chat header briefly carried one; the owner had it removed the same day
+(2026-08-12): only the centred name, "so it looks clean". A side effect
+worth keeping either way: the chat page no longer selects `avatar`, so the
+~15KB data URL stopped riding in every 12-second poll payload.
+
 **The crop is drag-and-slider, not pinch.** `AvatarEditor` in
 `src/components/avatar-editor.tsx` reads Pointer Events on the stage for
 position and a plain `<input type="range">` for zoom — the same two degrees of

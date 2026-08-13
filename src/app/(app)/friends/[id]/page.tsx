@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { formatMomentIn } from "@/lib/dates";
 import { Chat, ClearChat } from "@/components/chat";
-import { Avatar } from "@/components/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +27,11 @@ export default async function ChatPage({
       ],
     },
     include: {
-      requester: { select: { id: true, name: true, shareWeight: true, avatar: true } },
-      addressee: { select: { id: true, name: true, shareWeight: true, avatar: true } },
+      // No avatar here on purpose: the chat header shows only the name
+      // (owner's call, 2026-08-12), and the ~15KB data URL would otherwise
+      // ride in every 12-second poll's payload.
+      requester: { select: { id: true, name: true, shareWeight: true } },
+      addressee: { select: { id: true, name: true, shareWeight: true } },
     },
   });
   // Not friends (or a forged id): nothing to show. Back to the list.
@@ -73,15 +75,23 @@ export default async function ChatPage({
           for the same reason: this row belongs to the chrome, not the page.
           bg-ground + the negative margin/padding pair mirrors main's
           px-5/md:px-6 so the surface covers edge-to-edge. */}
-      <div className="sticky top-[3.75rem] z-10 -mx-5 -mt-7 flex items-baseline justify-between gap-3 bg-ground px-5 py-2 md:-mx-6 md:px-6">
-        <Link href="/friends" className="eyebrow shrink-0">
-          ‹ Friends
-        </Link>
-        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-          <Avatar src={friend.avatar} name={friend.name} size={28} />
-          <h1 className="min-w-0 truncate font-bold">{friend.name}</h1>
+      {/* Name only, truly centred: both side slots are flex-1, so the title
+          sits at the optical centre regardless of "‹ Friends" and "Clear"
+          being different widths. No avatar here — the owner's call
+          (2026-08-12): the conversation is about the words, and the face is
+          one tap back on the card. */}
+      <div className="sticky top-[3.75rem] z-10 -mx-5 -mt-7 flex items-center justify-between gap-3 bg-ground px-5 py-2 md:-mx-6 md:px-6">
+        <div className="flex flex-1 justify-start">
+          <Link href="/friends" className="eyebrow shrink-0">
+            ‹ Friends
+          </Link>
         </div>
-        <ClearChat friendId={friend.id} friendName={friend.name} />
+        <h1 className="min-w-0 shrink truncate text-center font-bold">
+          {friend.name}
+        </h1>
+        <div className="flex flex-1 justify-end">
+          <ClearChat friendId={friend.id} friendName={friend.name} />
+        </div>
       </div>
 
       <Chat

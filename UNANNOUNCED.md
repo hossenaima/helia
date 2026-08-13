@@ -53,8 +53,8 @@ node scripts/announce.mjs "…" "…" --send                                # to
   at the bottom of the screen where your thumb is, the tab bar steps out of
   the way, and Clear moved up top. The whole screen is the conversation.
 - **Profile pictures.** Settings → Profile picture: pick a photo, drag and
-  zoom it inside the circle, save. Your friends see it on your card and in
-  your chats. No photo, no problem — your initial stands in. Remove it any
+  zoom it inside the circle, save. Your friends see it on your card on the
+  Friends tab. No photo, no problem — your initial stands in. Remove it any
   time; deleting your account deletes it too.
 - **The app no longer pinch-zooms.** It behaves like an installed app
   rather than a web page.
