@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { MacroBar } from "@/components/macro-bar";
-import { deleteMealAction, updateMealItemsAction } from "@/app/actions/meals";
+import {
+  addMealItemAction,
+  deleteMealAction,
+  renameMealAction,
+  updateMealItemsAction,
+} from "@/app/actions/meals";
 import { estimateBand, mealNutrition, mealPrecision } from "@/lib/nutrition";
 
 type Item = {
@@ -54,6 +59,9 @@ export function MealCard({
     })),
   );
   const [removed, setRemoved] = useState<string[]>([]);
+  const [nameDraft, setNameDraft] = useState(meal.name);
+  const [addName, setAddName] = useState("");
+  const [addCalories, setAddCalories] = useState("");
 
   const n = mealNutrition(meal);
   const precision = mealPrecision(meal);
@@ -85,6 +93,16 @@ export function MealCard({
 
   function save() {
     startSaving(async () => {
+      if (nameDraft.trim() !== meal.name) {
+        await renameMealAction({ mealId: meal.id, name: nameDraft });
+      }
+      if (addName.trim()) {
+        await addMealItemAction({
+          mealId: meal.id,
+          name: addName,
+          calories: Number(addCalories) || 0,
+        });
+      }
       await updateMealItemsAction({
         mealId: meal.id,
         // Inputs hold strings while being typed; the action wants numbers.
@@ -99,6 +117,8 @@ export function MealCard({
       });
       setEditing(false);
       setRemoved([]);
+      setAddName("");
+      setAddCalories("");
     });
   }
 
@@ -156,47 +176,51 @@ export function MealCard({
 
       {n.calories > 0 && <MacroBar macros={n} size="compact" />}
 
-      {open && showItems && (
+      {open && (
         <div className="mt-3 border-t border-rule pt-3">
           {!editing ? (
             <>
-              <ul className="space-y-3">
-                {meal.items.map((item) => (
-                  <li key={item.id}>
-                    <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="min-w-0 flex-1 font-semibold">
-                        {item.name}
-                        {item.quantity && (
-                          <span className="font-normal text-ink-muted">
-                            {" "}
-                            · {item.quantity}
+              {showItems && (
+                <>
+                  <ul className="space-y-3">
+                    {meal.items.map((item) => (
+                      <li key={item.id}>
+                        <div className="flex items-baseline justify-between gap-3 text-sm">
+                          <span className="min-w-0 flex-1 font-semibold">
+                            {item.name}
+                            {item.quantity && (
+                              <span className="font-normal text-ink-muted">
+                                {" "}
+                                · {item.quantity}
+                              </span>
+                            )}
                           </span>
+                          <span className="tnum shrink-0 text-sm">
+                            {item.calories ?? "—"}
+                          </span>
+                        </div>
+                        {item.basis && (
+                          <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
+                            {item.basis}
+                          </p>
                         )}
-                      </span>
-                      <span className="tnum shrink-0 text-sm">
-                        {item.calories ?? "—"}
-                      </span>
-                    </div>
-                    {item.basis && (
-                      <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
-                        {item.basis}
-                      </p>
-                    )}
-                    <p className="tnum mt-1 text-xs text-ink-faint">
-                      P {round(item.proteinG)}g · C {round(item.carbsG)}g · F{" "}
-                      {round(item.fatG)}g · fiber {round(item.fiberG)}g ·{" "}
-                      {round(item.sodiumMg)}mg sodium
-                    </p>
-                  </li>
-                ))}
-              </ul>
+                        <p className="tnum mt-1 text-xs text-ink-faint">
+                          P {round(item.proteinG)}g · C {round(item.carbsG)}g · F{" "}
+                          {round(item.fatG)}g · fiber {round(item.fiberG)}g ·{" "}
+                          {round(item.sodiumMg)}mg sodium
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
 
-              {estimated && (
-                <p className="mt-3 text-xs text-ink-muted">
-                  {fromPhoto
-                    ? "Read from your photo. A picture cannot show a portion exactly — the working is under each line, so correct anything that looks wrong."
-                    : "Estimated from your description. Numbers off? Correct them."}
-                </p>
+                  {estimated && (
+                    <p className="mt-3 text-xs text-ink-muted">
+                      {fromPhoto
+                        ? "Read from your photo. A picture cannot show a portion exactly — the working is under each line, so correct anything that looks wrong."
+                        : "Estimated from your description. Numbers off? Correct them."}
+                    </p>
+                  )}
+                </>
               )}
 
               <button
@@ -209,7 +233,15 @@ export function MealCard({
             </>
           ) : (
             <>
-              <p className="eyebrow">Ate less than estimated?</p>
+              <input
+                type="text"
+                aria-label="Meal name"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                className="w-full rounded-lg bg-surface-sunk px-3 py-2 text-sm font-bold focus:outline-2 focus:outline-trace"
+              />
+
+              <p className="eyebrow mt-4">Ate less than estimated?</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {[
                   ["Half", 0.5],
@@ -290,8 +322,32 @@ export function MealCard({
                 })}
               </ul>
 
+              <div className="mt-4 flex items-center gap-2">
+                <input
+                  type="text"
+                  aria-label="New item name"
+                  placeholder="what did the estimate miss?"
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                  className="min-w-0 flex-1 rounded-lg bg-surface-sunk px-2 py-1.5 text-sm placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  aria-label="Calories for new item"
+                  placeholder="kcal"
+                  value={addCalories}
+                  onChange={(e) => setAddCalories(e.target.value)}
+                  className="tnum w-20 rounded-lg bg-surface-sunk px-2 py-1.5 text-right text-sm font-semibold placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
+                />
+              </div>
+
               <p className="tnum mt-3 text-sm font-bold">
-                New total {Math.round(draftTotal).toLocaleString()} kcal
+                New total{" "}
+                {Math.round(
+                  draftTotal + (Number(addCalories) || 0),
+                ).toLocaleString()}{" "}
+                kcal
               </p>
 
               <div className="mt-3 flex gap-2">
@@ -307,6 +363,9 @@ export function MealCard({
                         quantity: i.quantity ?? "",
                       })),
                     );
+                    setNameDraft(meal.name);
+                    setAddName("");
+                    setAddCalories("");
                   }}
                   className="flex-1 rounded-full bg-surface-sunk px-4 py-2 text-sm font-bold transition-opacity hover:opacity-80"
                 >

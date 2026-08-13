@@ -300,6 +300,64 @@ export async function updateMealItemsAction(input: {
   return { ok: true };
 }
 
+/** A rename is a label change and nothing else: the items, their calories
+ *  and the ± band stay untouched, and the reuse list follows the new name.
+ *  `note` is deliberately NOT touched — it is the verbatim text the
+ *  estimate was based on, and rewriting history helps nobody. */
+export async function renameMealAction(input: {
+  mealId: string;
+  name: string;
+}) {
+  const me = await requireUser();
+  const name = input.name.trim().slice(0, 60);
+  if (!name) return { ok: false as const, error: "Give it a name." };
+
+  const { count } = await prisma.meal.updateMany({
+    where: { id: input.mealId, userId: me.id },
+    data: { name },
+  });
+  if (count === 0) return { ok: false as const, error: "No such meal." };
+
+  revalidatePath("/meals");
+  return { ok: true as const };
+}
+
+/** A typed addition to a logged meal: name + calories, exact because it was
+ *  typed (the house rule), macros blank like every hand-typed item. */
+export async function addMealItemAction(input: {
+  mealId: string;
+  name: string;
+  calories: number;
+}) {
+  const me = await requireUser();
+  const name = input.name.trim().slice(0, 80);
+  const calories = Math.round(input.calories);
+  if (!name) return { ok: false as const, error: "What was it?" };
+  if (!Number.isFinite(calories) || calories < 0 || calories > 5000) {
+    return { ok: false as const, error: "Calories look off." };
+  }
+
+  // Ownership first: the create is not scoped by userId, the check is.
+  const meal = await prisma.meal.findFirst({
+    where: { id: input.mealId, userId: me.id },
+    select: { id: true },
+  });
+  if (!meal) return { ok: false as const, error: "No such meal." };
+
+  await prisma.mealItem.create({
+    data: {
+      mealId: meal.id,
+      name,
+      calories,
+      source: "manual",
+      precision: "exact",
+    },
+  });
+
+  revalidatePath("/meals");
+  return { ok: true as const };
+}
+
 export async function deleteMealAction(formData: FormData) {
   const user = await requireUser();
 

@@ -27,6 +27,13 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 *As of 2026-08-12. Deployed and live.*
 
+- **Rename a meal, or add what the estimate missed.** Open a meal's working
+  and tap Edit — a name field sits above the items now, so a photo-read or
+  hand-typed entry can be relabeled without redoing it. Below the items, a
+  second row lets you add anything the estimate left out: type what it was
+  and its calories, and it's added as an exact figure, the same as any number
+  you type by hand. The Edit button now shows for every meal, including the
+  hand-typed ones that used to have nothing to expand into.
 - **Notes are now chats.** Your notes to a friend land in a conversation —
   open it from their card on the Friends tab. You can scroll back through a
   message history instead of watching notes vanish after 12 hours; messages
