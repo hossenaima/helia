@@ -33,6 +33,12 @@ export const viewport: Viewport = {
   // Without this, `env(safe-area-inset-*)` resolves to 0 on iPhone and the
   // bottom bar sits under the home indicator.
   viewportFit: "cover",
+  // Pinch-zoom off, owner's call (2026-08-12): this is an invited six-person
+  // app that should feel installed, and stray zooms broke that. The
+  // accessibility cost was weighed. Both properties, because iOS honours
+  // maximum-scale more reliably than user-scalable.
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
