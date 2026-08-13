@@ -451,11 +451,17 @@ body {
  * forward or back, and a sideways slide would claim an order that is not
  * there. The reduced-motion block below zeroes both.
  */
-::view-transition-old(*.tab-exit) {
+/* Matched by name-wildcard, not by the template's classes: the class-scoped
+   form (`(*.tab-exit)`) needs Safari 18.4, a year newer than view
+   transitions themselves, and matched nothing on earlier iOS — which read
+   as "there is no animation". The template's only VT is the tab switch, so
+   the wildcard is exact today; scope by class again if a second transition
+   ever appears. */
+::view-transition-old(*) {
   animation: tab-exit 120ms ease-in both;
 }
 
-::view-transition-new(*.tab-enter) {
+::view-transition-new(*) {
   animation: tab-enter 200ms cubic-bezier(0.22, 0.8, 0.3, 1) both;
 }
 
