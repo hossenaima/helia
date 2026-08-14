@@ -25,7 +25,27 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
-*Nothing — everything shipped so far was announced on 2026-08-12.*
+- **See when you&rsquo;ll reach your goal.** On the Weight tab, under
+  &ldquo;X to go&rdquo;, Helia now reads your recent trend and says roughly when
+  you&rsquo;ll get there at the pace you&rsquo;ve been going —
+  &ldquo;At about 0.7 lb/wk, on track for ~Oct 3.&rdquo; It waits until there are
+  a couple of weeks of weigh-ins to mean it, smooths out the daily noise before
+  judging the pace, and if the trend isn&rsquo;t heading toward your goal lately
+  it says so plainly instead of inventing a date.
+- **A gentle heads-up on very low targets.** A calorie target under ~1,200 a
+  day, or a goal weight that&rsquo;s underweight for your height, now shows a
+  quiet note suggesting a word with a professional first. It never blocks you —
+  the number still saves; it just no longer passes without comment.
+- **Plain about what a number is.** Meal estimates now say they&rsquo;re
+  estimates, not measurements — adjust anything that looks off — and the daily
+  targets note that they&rsquo;re general wellness targets, not medical advice.
+- **The &ldquo;before you panic&rdquo; note now shows its working.** After an
+  overnight jump it does the maths with your own numbers — &ldquo;you logged
+  about 1,800 kcal yesterday; a pound of fat is roughly 3,500, so this is
+  water, not fat&rdquo; — and it now spots a carb-heavy meal as a cause too, not
+  just salt and fiber (a big plate of pasta or rice makes the body hold on to
+  water). Nothing logged the day before? It still reassures on the
+  physiology alone.
 
 ## Already announced
 

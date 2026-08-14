@@ -74,6 +74,15 @@ export function daysBetween(a: string, b: string): number {
   return Math.round(ms / 86_400_000);
 }
 
+/** "Aug 2" — month and day only, for a date read in a sentence. */
+export function formatMonthDay(day: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  }).format(dayKeyToDate(day));
+}
+
 /** "Sat, Aug 2" — compact label for lists and chart axes. */
 export function formatDayShort(day: string): string {
   return new Intl.DateTimeFormat("en-US", {

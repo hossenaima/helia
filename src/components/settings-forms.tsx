@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   changePasswordAction,
   saveEmailAction,
@@ -8,7 +8,22 @@ import {
   saveSettingsAction,
   type SettingsResult,
 } from "@/app/actions/settings";
-import type { Units } from "@/lib/units";
+import { toLbs, type Units } from "@/lib/units";
+
+/** Clinical rule-of-thumb floors, kept here so both cautions read from one place. */
+const MIN_CALORIES = 1200;
+const UNDERWEIGHT_BMI = 18.5;
+
+/** BMI from a weight already in pounds and a height in inches, or null. */
+function bmi(lbs: number | null, inches: number | null): number | null {
+  if (lbs === null || inches === null || inches <= 0) return null;
+  return (703 * lbs) / (inches * inches);
+}
+
+function num(value: string): number | null {
+  const n = Number(value.trim());
+  return value.trim() !== "" && Number.isFinite(n) && n > 0 ? n : null;
+}
 
 const INITIAL: SettingsResult = { ok: false };
 
@@ -33,6 +48,28 @@ export function GoalForm({
     saveSettingsAction,
     INITIAL,
   );
+
+  // Live values for the two gentle cautions. Seeded from what is saved so a
+  // dangerous figure already on file is flagged the moment the form opens.
+  const [goalStr, setGoalStr] = useState(goalWeight?.toString() ?? "");
+  const [heightStr, setHeightStr] = useState(heightInches?.toString() ?? "");
+  const [calorieStr, setCalorieStr] = useState(calorieTarget?.toString() ?? "");
+
+  const calorieCaution =
+    num(calorieStr) !== null && num(calorieStr)! < MIN_CALORIES
+      ? `Below about ${MIN_CALORIES.toLocaleString()} kcal a day is very low — worth checking with a professional first.`
+      : null;
+
+  // Goal weight is typed in the unit selected on this form; height is inches.
+  const goalNum = num(goalStr);
+  const goalBmi = bmi(
+    goalNum === null ? null : toLbs(goalNum, units),
+    num(heightStr),
+  );
+  const goalCaution =
+    goalBmi !== null && goalBmi < UNDERWEIGHT_BMI
+      ? "This goal is in the underweight range for your height — worth a word with a professional."
+      : null;
 
   return (
     <form action={formAction} className="mt-4 rounded-xl border border-rule bg-surface p-5">
@@ -70,6 +107,8 @@ export function GoalForm({
         name="goalWeight"
         label={`Goal weight (${units})`}
         defaultValue={goalWeight}
+        onValue={setGoalStr}
+        caution={goalCaution}
       />
       <NumberField
         id="startWeight"
@@ -83,6 +122,7 @@ export function GoalForm({
         name="heightInches"
         label="Height (inches)"
         defaultValue={heightInches}
+        onValue={setHeightStr}
       />
 
       <div className="mt-7 border-t border-rule pt-5">
@@ -90,7 +130,8 @@ export function GoalForm({
         <p className="mt-1 text-xs text-ink-muted">
           Drives your remaining-calorie budget, the progress bars, and what
           &ldquo;What can I eat?&rdquo; suggests. Left blank, those stay hidden
-          rather than guessing a number for you.
+          rather than guessing a number for you. General wellness targets, not
+          medical advice.
         </p>
 
         <NumberField
@@ -98,6 +139,8 @@ export function GoalForm({
           name="calorieTarget"
           label="Calories"
           defaultValue={calorieTarget}
+          onValue={setCalorieStr}
+          caution={calorieCaution}
         />
         <NumberField
           id="proteinTargetG"
@@ -252,12 +295,17 @@ function NumberField({
   label,
   hint,
   defaultValue,
+  onValue,
+  caution,
 }: {
   id: string;
   name: string;
   label: string;
   hint?: string;
   defaultValue: number | null;
+  onValue?: (value: string) => void;
+  /** A gentle, non-blocking note shown under the field. */
+  caution?: string | null;
 }) {
   return (
     <div className="mt-5">
@@ -272,12 +320,16 @@ function NumberField({
         inputMode="decimal"
         autoComplete="off"
         defaultValue={defaultValue === null ? "" : String(defaultValue)}
+        onChange={onValue ? (e) => onValue(e.target.value) : undefined}
         placeholder="—"
         className="
           tnum mt-2 w-32 border-b border-rule bg-transparent pb-1 text-lg
           placeholder:text-ink-faint focus:border-trace focus:outline-none
         "
       />
+      {caution && (
+        <p className="mt-2 max-w-xs text-xs text-up">{caution}</p>
+      )}
     </div>
   );
 }

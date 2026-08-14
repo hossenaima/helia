@@ -2,8 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
-import { todayIn, formatDayShort, formatTimeIn, dayKeyIn } from "@/lib/dates";
+import {
+  todayIn,
+  formatDayShort,
+  formatMonthDay,
+  formatTimeIn,
+  dayKeyIn,
+} from "@/lib/dates";
 import { formatDelta, fromLbs, formatWeight, type Units } from "@/lib/units";
+import { projectGoal, type GoalProjection } from "@/lib/projection";
 import { PageTitle } from "@/components/page-title";
 import { UnitSwitch } from "@/components/unit-switch";
 import { WeighInForm } from "@/components/weigh-in-form";
@@ -18,7 +25,7 @@ import {
   weighInStreak,
 } from "@/lib/calendar";
 import { MilestoneBanner } from "@/components/milestone-banner";
-import { flaggedMeals, rollingAverage } from "@/lib/nutrition";
+import { flaggedMeals, mealNutrition, rollingAverage } from "@/lib/nutrition";
 import { addDays } from "@/lib/dates";
 
 // Auth state and the log itself change per request; nothing here may be
@@ -83,6 +90,21 @@ export default async function WeightPage() {
   const toGoal =
     latest && goalWeightLbs !== null ? latest.weightLbs - goalWeightLbs : null;
 
+  // When will the trend reach the goal, at the pace it has lately? Fit on the
+  // smoothed trend, not raw weigh-ins — see projectGoal.
+  const projection =
+    goalWeightLbs === null
+      ? null
+      : projectGoal(
+          entries
+            .map((e) => ({ date: e.date, trendLbs: trendByDate.get(e.date) }))
+            .filter(
+              (p): p is { date: string; trendLbs: number } =>
+                p.trendLbs != null,
+            ),
+          goalWeightLbs,
+        );
+
   // Undefined when start and goal coincide — there is no distance to be a
   // fraction of, and dividing would blow up.
   const progress =
@@ -103,6 +125,11 @@ export default async function WeightPage() {
     ),
   );
   const priorTags = [...new Set(flagged.flatMap((f) => f.tags))];
+  // What was eaten the day before the jump — the number the "not fat" maths
+  // leans on. Null when nothing was logged, so the line simply does not appear.
+  const priorDayKcal = recentMeals
+    .filter((m) => m.date === addDays(latestDate, -1))
+    .reduce((sum, m) => sum + mealNutrition(m).calories, 0);
   // Name the most recent offender — that is the one still in the system.
   const culpritDate = flagged.map((f) => f.date).sort().at(-1) ?? null;
   const overnightGain =
@@ -143,6 +170,7 @@ export default async function WeightPage() {
           units={units}
           tags={priorTags}
           onDate={culpritDate}
+          loggedKcal={priorDayKcal > 0 ? Math.round(priorDayKcal) : null}
         />
       )}
       {latest ? (
@@ -179,6 +207,13 @@ export default async function WeightPage() {
                     ? "Goal reached"
                     : `${formatWeight(toGoal, units)} to go`}
                 </p>
+              )}
+              {toGoal !== null && toGoal > 0 && projection && (
+                <GoalPace
+                  projection={projection}
+                  units={units}
+                  today={today}
+                />
               )}
             </div>
           </section>
@@ -324,6 +359,48 @@ function loggedTime(
   return dayKeyIn(entry.createdAt, timezone) === entry.date
     ? formatTimeIn(entry.createdAt, timezone)
     : null;
+}
+
+/**
+ * A quiet forecast under "X to go": at the recent pace, roughly when the trend
+ * reaches goal. Silent until there is enough history to mean it, and it names a
+ * date only while the trend is actually heading toward the goal.
+ */
+function GoalPace({
+  projection,
+  units,
+  today,
+}: {
+  projection: GoalProjection;
+  units: Units;
+  today: string;
+}) {
+  if (projection.kind === "stalled") {
+    return (
+      <p className="mt-1 text-sm text-ink-faint">
+        Not trending toward your goal lately.
+      </p>
+    );
+  }
+  if (projection.kind !== "eta") return null; // reached / insufficient: say nothing
+
+  const pace = `${formatWeight(Math.abs(projection.lbsPerWeek), units)}/wk`;
+  if (projection.beyondYear) {
+    return (
+      <p className="mt-1 text-sm text-ink-muted">
+        At about {pace} — over a year to goal.
+      </p>
+    );
+  }
+  return (
+    <p className="mt-1 text-sm text-ink-muted">
+      At about {pace}, on track for{" "}
+      <span className="tnum font-semibold text-ink">
+        ~{formatMonthDay(addDays(today, projection.daysToGoal))}
+      </span>
+      .
+    </p>
+  );
 }
 
 function StatTile({

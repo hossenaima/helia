@@ -288,6 +288,12 @@ export function MealForm({
         </button>
       </div>
 
+      {aiEnabled && (
+        <p className="mt-3 text-xs text-ink-faint">
+          Estimated, not measured — adjust anything that looks off.
+        </p>
+      )}
+
       {!aiEnabled && (
         <p className="mt-3 text-xs text-ink-muted">
           Estimation is off. Add a Gemini API key to your environment to turn it

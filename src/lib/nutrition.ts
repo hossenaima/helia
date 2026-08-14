@@ -44,6 +44,10 @@ export const ZERO: Nutrition = {
 /** A day is flagged when a single sitting crosses these. */
 export const HIGH_SODIUM_MG = 1500;
 export const HIGH_FIBER_G = 10;
+// A carb-heavy sitting stores glycogen, and glycogen holds ~3 g of water per
+// gram — a classic overnight-scale culprit.
+// ponytail: heuristic; a big pasta/rice/dessert plate lands here. Tune if it over- or under-fires.
+export const HIGH_CARB_G = 75;
 
 /** Restaurant portions vary enough that a point estimate overstates certainty. */
 export const ESTIMATE_RANGE = 0.15;
@@ -90,7 +94,7 @@ export function estimateBand(calories: number) {
   return { low: Math.max(0, Math.round(calories) - margin), high: Math.round(calories) + margin, margin };
 }
 
-export type DayTag = "high_sodium" | "high_volume";
+export type DayTag = "high_sodium" | "high_carb" | "high_volume";
 
 /**
  * Which meals in the window crossed a flag, and when. The date matters: the
@@ -106,6 +110,7 @@ export function flaggedMeals<T extends MealLike & { date: string }>(
     const n = mealNutrition(meal);
     const tags: DayTag[] = [];
     if (n.sodiumMg >= HIGH_SODIUM_MG) tags.push("high_sodium");
+    if (n.carbsG >= HIGH_CARB_G) tags.push("high_carb");
     if (n.fiberG >= HIGH_FIBER_G) tags.push("high_volume");
     if (tags.length) flagged.push({ date: meal.date, tags });
   }
@@ -120,6 +125,9 @@ export function dayTags(meals: MealLike[]): DayTag[] {
     const n = mealNutrition(meal);
     if (n.sodiumMg >= HIGH_SODIUM_MG && !tags.includes("high_sodium")) {
       tags.push("high_sodium");
+    }
+    if (n.carbsG >= HIGH_CARB_G && !tags.includes("high_carb")) {
+      tags.push("high_carb");
     }
     if (n.fiberG >= HIGH_FIBER_G && !tags.includes("high_volume")) {
       tags.push("high_volume");
