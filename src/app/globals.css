@@ -530,3 +530,13 @@ body {
     backdrop-filter: blur(2px);
   }
 }
+
+/* A printed page (or a share-sheet PDF) is the document, not the app: no
+   sticky chrome, no controls. Unlayered on purpose — it must beat utilities. */
+@media print {
+  header,
+  nav,
+  .print-hide {
+    display: none;
+  }
+}

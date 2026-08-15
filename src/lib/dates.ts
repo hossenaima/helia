@@ -113,6 +113,28 @@ export function formatTimeIn(value: Date | string, timeZone: string): string {
   }).format(new Date(value));
 }
 
+/**
+ * The clock time a weigh-in was recorded, or null when that time would not
+ * mean what it says.
+ *
+ * `createdAt` is when the row appeared, which is only the time somebody
+ * *weighed* if they logged it on the day it is for. A calendar backfill or an
+ * Apple Health import writes rows for past days at the moment of the import,
+ * so rendering that as "7:42 AM" would state a morning that never happened.
+ * When the two days disagree, the entry gets no time rather than a wrong one.
+ *
+ * `createdAt`, not `updatedAt`: correcting a typo at 7:05 does not move the
+ * weigh-in, and the first write is the one that tracks it.
+ */
+export function loggedTime(
+  entry: { date: string; createdAt: Date },
+  timezone: string,
+): string | null {
+  return dayKeyIn(entry.createdAt, timezone) === entry.date
+    ? formatTimeIn(entry.createdAt, timezone)
+    : null;
+}
+
 /** "Aug 6, 8:14 AM" in a given zone — a note needs the hour, not just the day. */
 export function formatMomentIn(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat("en-US", {

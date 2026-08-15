@@ -6,8 +6,7 @@ import {
   todayIn,
   formatDayShort,
   formatMonthDay,
-  formatTimeIn,
-  dayKeyIn,
+  loggedTime,
 } from "@/lib/dates";
 import { formatDelta, fromLbs, formatWeight, type Units } from "@/lib/units";
 import { projectGoal, type GoalProjection } from "@/lib/projection";
@@ -337,28 +336,6 @@ export default async function WeightPage() {
       )}
     </>
   );
-}
-
-/**
- * The clock time a weigh-in was recorded, or null when that time would not
- * mean what it says.
- *
- * `createdAt` is when the row appeared, which is only the time somebody
- * *weighed* if they logged it on the day it is for. A calendar backfill or an
- * Apple Health import writes rows for past days at the moment of the import,
- * so rendering that as "7:42 AM" would state a morning that never happened.
- * When the two days disagree, the entry gets no time rather than a wrong one.
- *
- * `createdAt`, not `updatedAt`: correcting a typo at 7:05 does not move the
- * weigh-in, and the first write is the one that tracks it.
- */
-function loggedTime(
-  entry: { date: string; createdAt: Date },
-  timezone: string,
-): string | null {
-  return dayKeyIn(entry.createdAt, timezone) === entry.date
-    ? formatTimeIn(entry.createdAt, timezone)
-    : null;
 }
 
 /**

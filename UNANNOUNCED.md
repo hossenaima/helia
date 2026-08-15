@@ -25,6 +25,14 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
+- **A day report you can share.** Meals tab → *Day report* (top of the Log
+  list): one page with the day&rsquo;s weigh-in and when you logged it, your
+  calorie total against your target, macros, and every meal with its items and
+  the estimator&rsquo;s working. Arrows step back through past days. *Share as
+  text* hands it to Messages or your clipboard as plain text — made for
+  pasting into an AI (&ldquo;analyze my day&rdquo;) instead of screenshotting —
+  and the share sheet&rsquo;s PDF option turns the page itself into a file you
+  can keep.
 - **See when you&rsquo;ll reach your goal.** On the Weight tab, under
   &ldquo;X to go&rdquo;, Helia now reads your recent trend and says roughly when
   you&rsquo;ll get there at the pace you&rsquo;ve been going —

@@ -38,8 +38,9 @@ export function Nav({ waiting = 0 }: { waiting?: number }) {
 
   // A conversation is full-screen: the composer owns the bottom edge and the
   // back link is the exit, like every messenger. Only /friends/<id> — the
-  // Friends list itself keeps its tabs.
-  if (/^\/friends\/.+/.test(pathname)) return null;
+  // Friends list itself keeps its tabs. The day report is a document with its
+  // own exit link, and the tab bar would land in every PDF made from it.
+  if (/^\/(friends\/.+|report)/.test(pathname)) return null;
 
   return (
     <nav

@@ -97,7 +97,15 @@ export default async function MealsPage(props: PageProps<"/meals">) {
 
       {meals.length > 0 && (
         <section className="mt-9" aria-label="Meals logged">
-          <h2 className="eyebrow">Log</h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="eyebrow">Log</h2>
+            <Link
+              href={`/report?d=${date}`}
+              className="eyebrow transition-colors hover:!text-ink"
+            >
+              Day report
+            </Link>
+          </div>
 
           <ul className="mt-3 space-y-3">
             {meals.map((meal, i) => (
