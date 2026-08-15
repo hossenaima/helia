@@ -1469,6 +1469,15 @@ that works:
   freshly hashed chunks produces 500s on assets and CSS that looks like a
   regression in the feature you just wrote.
 - A transition sampled after its duration looks like a jump. Sample inside it.
+- **Puppeteer's `overridePermissions` does not actually grant clipboard
+  writes.** `navigator.clipboard.writeText` checks `clipboardSanitizedWrite`,
+  which that API never grants, so the call rejects with `NotAllowedError` and
+  a copy button whose failure path is deliberately silent looks like a hang.
+  Grant it over CDP instead: `cdp.send("Browser.grantPermissions", {origin,
+  permissions: ["clipboardReadWrite", "clipboardSanitizedWrite"]})`. Headless
+  Chrome also *has* `navigator.share` (macOS), so testing the clipboard
+  fallback means stubbing share to `undefined` via `evaluateOnNewDocument` —
+  deleting the instance property does nothing, it lives on the prototype.
 
 ---
 
