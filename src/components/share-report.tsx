@@ -32,7 +32,24 @@ export function ShareReport({ text }: { text: string }) {
 
   return (
     <button type="button" onClick={share} className="btn btn-primary print-hide">
-      {copied ? "Copied" : "Share as text"}
+      {/* The iOS share glyph — the tray with the arrow — so the pill reads as
+          "this opens the share sheet" before the word does. */}
+      <svg
+        aria-hidden
+        width="14"
+        height="16"
+        viewBox="0 0 14 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="mr-1.5 inline-block align-[-2px]"
+      >
+        <path d="M2 7h-1v8h12V7h-1" transform="translate(1 0)" />
+        <path d="M7 10V1M4 4l3-3 3 3" />
+      </svg>
+      {copied ? "Copied" : "Share"}
     </button>
   );
 }

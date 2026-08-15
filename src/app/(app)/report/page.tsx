@@ -151,12 +151,19 @@ export default async function ReportPage(props: PageProps<"/report">) {
         )}
       </nav>
 
-      <header className="mt-5">
-        <p className="eyebrow">Day report</p>
-        <h1 className="font-cond text-2xl font-bold tracking-tight">
-          {formatDayLong(date)}
-        </h1>
-        <p className="mt-1 text-sm text-ink-muted">{user.name}</p>
+      <header className="mt-5 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="eyebrow">Day report</p>
+          <h1 className="font-cond text-2xl font-bold tracking-tight">
+            {formatDayLong(date)}
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">{user.name}</p>
+        </div>
+        {/* The page's one action, visible without scrolling — buried below the
+            meal list it read as a footnote. */}
+        <div className="shrink-0 pt-1">
+          <ShareReport text={text} />
+        </div>
       </header>
 
       <section className="card mt-5 p-4" aria-label="Weight">
@@ -291,10 +298,6 @@ export default async function ReportPage(props: PageProps<"/report">) {
       <p className="mt-6 text-xs text-ink-faint">
         Figures marked &ldquo;estimated&rdquo; are estimates, not measurements.
       </p>
-
-      <div className="print-hide mt-5">
-        <ShareReport text={text} />
-      </div>
     </>
   );
 }
