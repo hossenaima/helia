@@ -91,21 +91,20 @@ export default async function MealsPage(props: PageProps<"/meals">) {
         isToday={date === today}
       />
 
+      {/* The day as one shareable page. A proper button, not a corner link —
+          shipped as eyebrow text beside "Log" it went unnoticed. */}
+      <Link href={`/report?d=${date}`} className="btn btn-soft mt-3 w-full">
+        View day report
+        <span aria-hidden>→</span>
+      </Link>
+
       <ActiveBurnField date={date} value={dayLog?.activeBurnKcal ?? null} />
 
       <MealForm date={date} aiEnabled={getEstimator().available} />
 
       {meals.length > 0 && (
         <section className="mt-9" aria-label="Meals logged">
-          <div className="flex items-baseline justify-between">
-            <h2 className="eyebrow">Log</h2>
-            <Link
-              href={`/report?d=${date}`}
-              className="eyebrow transition-colors hover:!text-ink"
-            >
-              Day report
-            </Link>
-          </div>
+          <h2 className="eyebrow">Log</h2>
 
           <ul className="mt-3 space-y-3">
             {meals.map((meal, i) => (

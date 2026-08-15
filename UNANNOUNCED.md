@@ -25,8 +25,8 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
-- **A day report you can share.** Meals tab → *Day report* (top of the Log
-  list): one page with the day&rsquo;s weigh-in and when you logged it, your
+- **A day report you can share.** Meals tab → *View day report*, right under
+  the day&rsquo;s totals: one page with the day&rsquo;s weigh-in and when you logged it, your
   calorie total against your target, macros, and every meal with its items and
   the estimator&rsquo;s working. Arrows step back through past days. The
   *Share* button at the top hands it to Messages or your clipboard as plain
