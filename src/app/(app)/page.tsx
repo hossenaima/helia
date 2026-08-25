@@ -19,10 +19,10 @@ import { ProgressRing } from "@/components/progress-ring";
 import { WeekStrip } from "@/components/week-strip";
 import {
   frozenDays,
-  milestoneReached,
   weekEnding,
   weighInStreak,
 } from "@/lib/calendar";
+import { milestoneReached } from "@/lib/phase";
 import { MilestoneBanner } from "@/components/milestone-banner";
 import { flaggedMeals, mealNutrition, rollingAverage } from "@/lib/nutrition";
 import { addDays } from "@/lib/dates";
@@ -58,8 +58,22 @@ export default async function WeightPage() {
     include: { items: true },
   });
 
-  const { units, goalWeightLbs } = user;
+  const { units } = user;
   const today = todayIn(user.timezone);
+
+  // There is no goal weight during reverse dieting: the ramp is the plan, and
+  // a target hanging over the climb would score exactly the regain the phase
+  // expects. `goalWeightLbs` is untouched in the database — it simply is not
+  // read into any of the goal UI until maintenance.
+  const inReverse = user.phase === "reverse";
+  const goalWeightLbs = inReverse ? null : user.goalWeightLbs;
+
+  // Readings within ±1 lb of the weight the cut ended at render neutral while
+  // the ramp runs — expected regain is not scored for or against.
+  const inBand = (weightLbs: number) =>
+    inReverse &&
+    user.phaseAnchorLbs !== null &&
+    Math.abs(weightLbs - user.phaseAnchorLbs) <= 1;
 
   const latest = entries.at(-1) ?? null;
   const previous = entries.at(-2) ?? null;
@@ -140,6 +154,13 @@ export default async function WeightPage() {
   // an unlogged evening, which is most of them.
   const showBanner = overnightGain !== null && overnightGain >= 0.8;
 
+  const milestone = milestoneReached({
+    startLbs,
+    currentLbs: latest?.weightLbs ?? null,
+    goalLbs: goalWeightLbs,
+    alreadyShownPct: user.milestonePct,
+  });
+
   const loggedDates = new Set(entries.map((e) => e.date));
   const week = weekEnding(today);
   const streak = weighInStreak(entries, freezes, today);
@@ -154,13 +175,8 @@ export default async function WeightPage() {
         <UnitSwitch units={units} />
       </div>
       <MilestoneBanner
-        milestone={milestoneReached({
-          startLbs,
-          currentLbs: latest?.weightLbs ?? null,
-          goalLbs: goalWeightLbs,
-          alreadyShown: user.milestoneLbs,
-        })}
-        units={units}
+        milestone={milestone}
+        canStartReverse={user.phase === null}
       />
 
       {showBanner && (
@@ -179,6 +195,9 @@ export default async function WeightPage() {
             aria-label="Current reading"
           >
             <ProgressRing
+              // The goal morning itself is already the trophy — the stored
+              // acknowledgment only lands after this render.
+              complete={user.milestonePct >= 100 || milestone?.kind === "goal"}
               percent={progress}
               value={fromLbs(latest.weightLbs, units).toFixed(1)}
               unit={units}
@@ -214,12 +233,47 @@ export default async function WeightPage() {
                   today={today}
                 />
               )}
+              {inReverse &&
+                user.calorieTarget !== null &&
+                user.rampEndKcal !== null && (
+                  <div className="min-w-0">
+                    <p className="tnum text-sm font-bold">
+                      Reverse dieting ·{" "}
+                      {user.calorieTarget.toLocaleString()} →{" "}
+                      {user.rampEndKcal.toLocaleString()} kcal
+                    </p>
+                    {user.rampLastStepOn !== null &&
+                      user.rampIntervalDays !== null && (
+                        <p className="tnum mt-1 text-sm text-ink-muted">
+                          Next increase ~
+                          {formatMonthDay(
+                            addDays(user.rampLastStepOn, user.rampIntervalDays),
+                          )}
+                        </p>
+                      )}
+                  </div>
+                )}
+              {user.phase === "maintain" && user.calorieTarget !== null && (
+                <p className="tnum mt-3 text-sm text-ink-muted">
+                  Maintaining at {user.calorieTarget.toLocaleString()} kcal
+                </p>
+              )}
             </div>
           </section>
 
           <dl className="mt-3 grid grid-cols-2 gap-3">
-            <StatTile label="Since last" deltaLbs={sinceLast} units={units} />
-            <StatTile label="Since start" deltaLbs={sinceStart} units={units} />
+            <StatTile
+              label="Since last"
+              deltaLbs={sinceLast}
+              units={units}
+              neutral={inBand(latest.weightLbs)}
+            />
+            <StatTile
+              label="Since start"
+              deltaLbs={sinceStart}
+              units={units}
+              neutral={inBand(latest.weightLbs)}
+            />
           </dl>
 
           <section
@@ -325,7 +379,11 @@ export default async function WeightPage() {
                       {delta === null ? (
                         <span className="text-ink-faint">—</span>
                       ) : (
-                        <DeltaText deltaLbs={delta} units={units} />
+                        <DeltaText
+                          deltaLbs={delta}
+                          units={units}
+                          neutral={inBand(entry.weightLbs)}
+                        />
                       )}
                     </span>
                   </li>
@@ -384,25 +442,43 @@ function StatTile({
   label,
   deltaLbs,
   units,
+  neutral = false,
 }: {
   label: string;
   deltaLbs: number | null;
   units: Units;
+  neutral?: boolean;
 }) {
   return (
     <div className="tile p-4">
       <dt className="eyebrow">{label}</dt>
       <dd className="tnum mt-1 whitespace-nowrap text-xl font-bold">
-        {deltaLbs === null ? "—" : <DeltaText deltaLbs={deltaLbs} units={units} />}
+        {deltaLbs === null ? (
+          "—"
+        ) : (
+          <DeltaText deltaLbs={deltaLbs} units={units} neutral={neutral} />
+        )}
       </dd>
     </div>
   );
 }
 
-/** Direction is carried by an arrow and a sign, never by color alone. */
-function DeltaText({ deltaLbs, units }: { deltaLbs: number; units: Units }) {
+/** Direction is carried by an arrow and a sign, never by color alone.
+ *  `neutral` keeps the arrow but drops the judgment colours — worn while
+ *  reverse dieting for readings near the weight the cut ended at, where a
+ *  small rise is the plan working, not a setback. */
+function DeltaText({
+  deltaLbs,
+  units,
+  neutral = false,
+}: {
+  deltaLbs: number;
+  units: Units;
+  neutral?: boolean;
+}) {
   const flat = Math.abs(fromLbs(deltaLbs, units)) < 0.05;
-  const tone = flat ? "text-ink-muted" : deltaLbs < 0 ? "text-down" : "text-up";
+  const tone =
+    flat || neutral ? "text-ink-muted" : deltaLbs < 0 ? "text-down" : "text-up";
   const arrow = flat ? "" : deltaLbs < 0 ? "↓ " : "↑ ";
 
   return (

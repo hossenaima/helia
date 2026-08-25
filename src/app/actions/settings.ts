@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPin, requireUser, verifyPin } from "@/lib/auth";
 import { toLbs } from "@/lib/units";
-import { isValidTimezone } from "@/lib/dates";
+import { isValidTimezone, todayIn } from "@/lib/dates";
 import { passwordProblem } from "@/lib/credentials";
 
 export type SettingsResult = { ok: boolean; error?: string; message?: string };
@@ -56,13 +56,24 @@ export async function saveSettingsAction(
     fiberTargetG,
   } = parsed.data;
 
+  // A different goal weight is a new cut: the quarter milestones and the
+  // finished-cut rainbow start over. Only on a real change — re-saving the
+  // form must not replay a celebration already had.
+  const newGoalLbs = goalWeight === null ? null : toLbs(goalWeight, units);
+  const goalChanged =
+    (newGoalLbs === null) !== (user.goalWeightLbs === null) ||
+    (newGoalLbs !== null &&
+      user.goalWeightLbs !== null &&
+      Math.abs(newGoalLbs - user.goalWeightLbs) > 0.01);
+
   // Goal and start weights are typed in the unit selected on this same form, so
   // they convert against the incoming unit rather than the previously saved one.
   await prisma.user.update({
     where: { id: user.id },
     data: {
       units,
-      goalWeightLbs: goalWeight === null ? null : toLbs(goalWeight, units),
+      ...(goalChanged ? { milestonePct: 0 } : {}),
+      goalWeightLbs: newGoalLbs,
       startWeightLbs: startWeight === null ? null : toLbs(startWeight, units),
       heightInches,
       calorieTarget: calorieTarget === null ? null : Math.round(calorieTarget),
@@ -257,13 +268,96 @@ export async function setAvatarAction(
  * Record that a milestone has been congratulated, so it is not shown again.
  *
  * Called by the banner itself once it has been seen. Monotonic: gaining weight
- * back and losing it again does not replay the same congratulation.
+ * back and losing it again does not replay the same congratulation. 100 is the
+ * goal itself, the last milestone there is.
  */
-export async function acknowledgeMilestoneAction(lbs: number): Promise<void> {
+export async function acknowledgeMilestoneAction(pct: number): Promise<void> {
   const me = await requireUser();
-  if (!Number.isFinite(lbs) || lbs <= me.milestoneLbs) return;
+  if (![25, 50, 75, 100].includes(pct) || pct <= me.milestonePct) return;
   await prisma.user.update({
     where: { id: me.id },
-    data: { milestoneLbs: Math.floor(lbs) },
+    data: { milestonePct: pct },
   });
+}
+
+const reversePlanSchema = z.object({
+  endKcal: z.coerce.number().int().min(1000).max(10000),
+  stepKcal: z.coerce.number().int().min(25).max(500),
+  intervalDays: z.coerce.number().int().min(7).max(28),
+  anchor: z.coerce.number().positive(),
+});
+
+/**
+ * Begin the reverse-dieting phase: calorie target climbs by a step every
+ * interval until it reaches the end figure, then the account rolls over to
+ * maintenance on its own. The anchor is the weight the cut ended at — readings
+ * within ±1 lb of it render neutral while the ramp runs, because expected
+ * regain is not something to score.
+ *
+ * There is no goal weight during reverse dieting; `goalWeightLbs` is left
+ * exactly as it is and simply not shown until maintenance.
+ */
+export async function startReversePhaseAction(
+  _prev: SettingsResult,
+  formData: FormData,
+): Promise<SettingsResult> {
+  const user = await requireUser();
+
+  if (user.calorieTarget === null) {
+    return { ok: false, error: "Set a calorie target first — the ramp starts from it." };
+  }
+
+  const parsed = reversePlanSchema.safeParse({
+    endKcal: formData.get("endKcal"),
+    stepKcal: formData.get("stepKcal"),
+    intervalDays: formData.get("intervalDays"),
+    anchor: formData.get("anchor"),
+  });
+  if (!parsed.success) {
+    return { ok: false, error: "Check the plan numbers — something is not a number we can use." };
+  }
+  const { endKcal, stepKcal, intervalDays, anchor } = parsed.data;
+  if (endKcal <= user.calorieTarget) {
+    return {
+      ok: false,
+      error: `Maintenance calories need to be above your current target of ${user.calorieTarget}.`,
+    };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      phase: "reverse",
+      rampEndKcal: endKcal,
+      rampStepKcal: stepKcal,
+      rampIntervalDays: intervalDays,
+      // The first bump lands one full interval from today.
+      rampLastStepOn: todayIn(user.timezone),
+      phaseAnchorLbs: toLbs(anchor, user.units),
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/settings");
+  return { ok: true, message: "Reverse dieting started." };
+}
+
+/** Leave the phase (reverse or maintenance) and go back to plain tracking.
+ *  The calorie target stays wherever the ramp left it — it is still the
+ *  number meals are budgeted against; only the schedule stops. */
+export async function stopPhaseAction(): Promise<void> {
+  const me = await requireUser();
+  await prisma.user.update({
+    where: { id: me.id },
+    data: {
+      phase: null,
+      rampEndKcal: null,
+      rampStepKcal: null,
+      rampIntervalDays: null,
+      rampLastStepOn: null,
+      phaseAnchorLbs: null,
+    },
+  });
+  revalidatePath("/");
+  revalidatePath("/settings");
 }

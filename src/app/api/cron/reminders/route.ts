@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { addDays, dayKeyIn, isValidTimezone, todayIn } from "@/lib/dates";
 import { pushToUser } from "@/lib/push";
 import { frozenDays, weighInStreak } from "@/lib/calendar";
+import { rampStep } from "@/lib/phase";
 
 /**
  * Reminder sweep. Meant to be called every hour — see `.github/workflows` —
@@ -30,6 +31,33 @@ export async function GET(request: NextRequest) {
   const { count: messagesPurged } = await prisma.message.deleteMany({
     where: { createdAt: { lt: new Date(now.getTime() - 90 * 86_400_000) } },
   });
+
+  // Reverse-dieting ramp: bump each due target by one step. Separate from the
+  // reminder loop below, which only sees push-subscribed accounts — a ramp
+  // belongs to everyone who started one. `rampStep` is due at most once per
+  // interval and stamps the day, so the at-least-once schedulers are safe here
+  // for the same reason `lastRemindedOn` makes them safe below.
+  const ramping = await prisma.user.findMany({
+    where: { phase: "reverse" },
+    select: {
+      id: true,
+      timezone: true,
+      phase: true,
+      calorieTarget: true,
+      rampEndKcal: true,
+      rampStepKcal: true,
+      rampIntervalDays: true,
+      rampLastStepOn: true,
+    },
+  });
+  let rampStepped = 0;
+  for (const user of ramping) {
+    const zone = isValidTimezone(user.timezone) ? user.timezone : "UTC";
+    const step = rampStep(user, dayKeyIn(now, zone));
+    if (!step) continue;
+    await prisma.user.update({ where: { id: user.id }, data: step });
+    rampStepped++;
+  }
 
   const candidates = await prisma.user.findMany({
     where: { notifyWeighIn: true, pushSubscriptions: { some: {} } },
@@ -121,6 +149,7 @@ export async function GET(request: NextRequest) {
     skippedAlreadyLogged,
     skippedAlreadySent,
     skippedFrozen,
+    rampStepped,
     messagesPurged,
     at: todayIn("UTC"),
   });

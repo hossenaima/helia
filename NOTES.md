@@ -259,6 +259,53 @@ overnight jump is water and digestion whether or not anything was written down �
 and a bad morning after an unlogged evening is the one *most* in need of the
 note. A flagged meal now only decides whether the banner names a culprit.
 
+### Phases: reverse dieting and maintenance
+
+Added 2026-08-25, on the owner's request, for the life after a cut: the
+calorie target climbs a step at a time back to maintenance, then holds.
+
+**The ramp writes `calorieTarget`; nothing else changed how it is read.** Every
+budget, report, digest and celebration keeps reading the one column it always
+read. The hourly reminders sweep advances the ramp (`rampStep` in
+`src/lib/phase.ts`, checked by `scripts/check-phase.mts`) — it already ran
+hourly for per-timezone reasons and is already at-least-once-safe, and
+`rampLastStepOn` makes the step idempotent the same way `lastRemindedOn` does.
+The ramp query is separate from the reminder loop, which only sees
+push-subscribed accounts.
+
+**One step per pass, never a catch-up.** Coming back from six weeks away bumps
+once and the cadence resumes — reverse dieting is gradual on purpose, and
+three missed steps at once would defeat it. A target already at or past
+`rampEndKcal` (edited by hand, say) clamps to the end and rolls the phase to
+"maintain"; that rollover *is* the maintenance transition, there is no other
+machinery.
+
+**There is no goal weight during reverse dieting — the owner's explicit call.**
+`goalWeightLbs` is untouched in the database and simply not read into the goal
+UI (ring percent, "to go", projection, chart goal line) while
+`phase = "reverse"`; it all comes back in maintenance. Instead
+`phaseAnchorLbs` records the weight the cut ended at, and readings within
+**±1 lb** of it render neutral — muted ink, no up/down colour — because
+expected regain while calories climb is the plan working, not a setback.
+Outside the band the normal colours return: a real drift is still information.
+
+**Milestones are quarters of the cut now, not 5 lb steps** — also the owner's
+call, wanting bigger moments: confetti (hand-rolled canvas in
+`confetti-burst.tsx`, ~70 rectangles once, skipped under reduced motion — the
+no-animation-library rule holds), headlines that pop in the colour the ring
+has warmed to, and no sub-line. The ring stroke warms from `--trace` toward
+`--reward` with progress, and at goal becomes a full-circle rainbow ombre (a
+conic-gradient div masked to the ring band — a conic gradient cannot be an
+SVG stroke) that stays as a trophy. This deliberately bends "colour is
+reserved for data"; the CSS comment at `--reward` says so. `milestonePct`
+(0/25/50/75/100) is the monotonic memory, and the goal now acknowledges
+itself as 100 — the old goal banner never acknowledged at all and would
+regreet every morning. **Changing the goal weight resets `milestonePct`**: a
+new goal is a new cut, new quarters, and the rainbow steps down. Re-saving an
+unchanged form must not replay anything, so the reset only fires on a real
+change. `milestoneLbs` is orphaned — nothing reads it — awaiting its
+post-deploy DROP alongside `Encouragement`.
+
 ### Streaks
 
 **A streak counts where a reading came from, not that a row exists.** Until
@@ -1558,6 +1605,10 @@ Duolingo, Apple Fitness), not yet implemented:
   oversight. The flag exists for when testing ends.
 - Supabase is in **us-west-1** while the owner is US East — ~70ms of avoidable
   latency per request. Cheap to fix while the database is small.
+- **Two orphaned columns/tables await their post-deploy DROP**: the
+  `Encouragement` table (since the chat release) and now `User.milestoneLbs`
+  (since milestones became quarters, 2026-08-25). Both only after the code
+  that stopped reading them is confirmed live, per the two-release rule.
 - Vercel is **not Git-connected**; deploys are `npx vercel deploy --prod`.
   Pushing to GitHub does not deploy — but it *is* what feeds the reminder
   workflow, so the two now have to stay in step. The sweep first ran on

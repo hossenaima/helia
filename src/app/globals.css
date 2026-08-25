@@ -39,6 +39,11 @@
   /* Left saturated on purpose: it is what keeps the goal line separable from
      the trace for a deutan reader (ΔE 8.5). It appears once, dashed. */
   --goal: #9a3ba0; /* goal horizon */
+  /* Celebration only. The progress ring and the milestone headlines warm
+     toward this as a cut progresses — asked for by the owner (2026-08-25) as
+     a deliberate exception to "colour is reserved for data": progress is the
+     data here. Never carries meaning on its own anywhere else. */
+  --reward: #d9a514;
 
   --down: #3a6d4a; /* moving toward goal */
   --up: #97503c; /* moving away */
@@ -538,5 +543,57 @@ body {
   nav,
   .print-hide {
     display: none;
+  }
+}
+
+@layer components {
+  /* Milestone headlines pop in the same colour the ring has warmed to at that
+     point — the card and the ring agree about how far along you are. */
+  .milestone-pop-25 {
+    color: color-mix(in oklab, var(--reward) 30%, var(--trace));
+  }
+  .milestone-pop-50 {
+    color: color-mix(in oklab, var(--reward) 55%, var(--trace));
+  }
+  .milestone-pop-75 {
+    color: color-mix(in oklab, var(--reward) 80%, var(--trace));
+  }
+
+  /* The goal wears the rainbow itself: gradient text, same hues as the ring's
+     ombre. `color: transparent` is what lets the background show through the
+     glyphs; anything that cannot clip falls back to the reward gold. */
+  .rainbow-text {
+    color: var(--reward);
+    background-image: linear-gradient(
+      100deg,
+      #c95f52,
+      #d9a514,
+      #3a9d5d,
+      #4e86e0,
+      #ae5fb0
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* The finished cut's trophy: the full ring as a rainbow ombre sweeping once
+     around. A conic gradient cannot be an SVG stroke, so this is a div masked
+     down to the ring's band. The mask percentages assume the ring's default
+     geometry (168px, 12px stroke — band from 85% out); if the ring is ever
+     drawn at another size, derive these instead of copying them. */
+  .ring-rainbow {
+    border-radius: 9999px;
+    background: conic-gradient(
+      from 0deg,
+      #c95f52,
+      #d9a514,
+      #3a9d5d,
+      #4e86e0,
+      #ae5fb0,
+      #c95f52
+    );
+    mask: radial-gradient(closest-side, transparent 85%, #000 86%);
+    -webkit-mask: radial-gradient(closest-side, transparent 85%, #000 86%);
   }
 }

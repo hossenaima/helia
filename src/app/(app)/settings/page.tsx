@@ -9,6 +9,7 @@ import {
   PasswordChangeForm,
   EmailForm,
   DigestForm,
+  PhaseForm,
 } from "@/components/settings-forms";
 import { DeleteAccount } from "@/components/delete-account";
 import { NotificationSettings } from "@/components/notification-settings";
@@ -22,9 +23,15 @@ export default async function SettingsPage() {
 
   const { units } = user;
   const aiEnabled = getEstimator().available;
-  const deviceCount = await prisma.pushSubscription.count({
-    where: { userId: user.id },
-  });
+  const [deviceCount, latestEntry] = await Promise.all([
+    prisma.pushSubscription.count({ where: { userId: user.id } }),
+    // The default end-of-cut anchor for the phase form.
+    prisma.weightEntry.findFirst({
+      where: { userId: user.id },
+      orderBy: { date: "desc" },
+      select: { weightLbs: true },
+    }),
+  ]);
 
   return (
     <>
@@ -39,6 +46,22 @@ export default async function SettingsPage() {
           calorieTarget={user.calorieTarget}
           proteinTargetG={user.proteinTargetG}
           fiberTargetG={user.fiberTargetG}
+        />
+      </section>
+
+      {/* The id is a link target: the goal celebration's "Start reverse
+          dieting" button lands here. */}
+      <section id="phase" className="mt-10">
+        <h2 className="eyebrow">Phase</h2>
+        <PhaseForm
+          phase={user.phase}
+          units={units}
+          calorieTarget={user.calorieTarget}
+          rampEndKcal={user.rampEndKcal}
+          rampStepKcal={user.rampStepKcal}
+          rampIntervalDays={user.rampIntervalDays}
+          rampLastStepOn={user.rampLastStepOn}
+          anchorDefault={display(user.phaseAnchorLbs ?? latestEntry?.weightLbs ?? null, units)}
         />
       </section>
 

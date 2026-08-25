@@ -9,18 +9,25 @@
  * animates from a full circumference (empty) to zero (the drawn length), so
  * nothing has to be measured or tweened in JavaScript, and the global
  * reduced-motion override switches it off along with everything else.
+ *
+ * The stroke warms from the trace colour toward the reward gold as progress
+ * climbs — approaching the goal is visible every morning, not only at the
+ * quarters. `complete` swaps the arc for the full-circle rainbow ombre: the
+ * finished cut's trophy, permanent until a new goal starts a new cut.
  */
 export function ProgressRing({
   percent,
   value,
   unit,
   caption,
+  complete = false,
   size = 168,
 }: {
   percent: number | null;
   value: string;
   unit: string;
   caption: string;
+  complete?: boolean;
   size?: number;
 }) {
   const stroke = 12;
@@ -37,9 +44,11 @@ export function ProgressRing({
         viewBox={`0 0 ${size} ${size}`}
         role="img"
         aria-label={
-          percent === null
-            ? `${value} ${unit}`
-            : `${Math.round(percent)} percent of the way from your start weight to your goal`
+          complete
+            ? `${value} ${unit} — goal reached`
+            : percent === null
+              ? `${value} ${unit}`
+              : `${Math.round(percent)} percent of the way from your start weight to your goal`
         }
       >
         <circle
@@ -50,13 +59,15 @@ export function ProgressRing({
           stroke="var(--surface-sunk)"
           strokeWidth={stroke}
         />
-        {percent !== null && (
+        {percent !== null && !complete && (
           <circle
             cx={size / 2}
             cy={size / 2}
             r={r}
             fill="none"
-            stroke="var(--trace)"
+            stroke={`color-mix(in oklab, var(--reward) ${Math.round(
+              Math.min(100, Math.max(0, percent)) * 0.6,
+            )}%, var(--trace))`}
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={`${filled} ${circumference}`}
@@ -67,6 +78,8 @@ export function ProgressRing({
           />
         )}
       </svg>
+
+      {complete && <div aria-hidden className="ring-rainbow absolute inset-0" />}
 
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <p className="tnum text-4xl font-bold leading-none">{value}</p>

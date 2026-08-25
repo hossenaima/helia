@@ -25,6 +25,19 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
+- **Reverse dieting, then maintenance.** Hit your goal? Settings → *Phase* (or
+  the button right on the goal celebration) starts a reverse diet: your calorie
+  target climbs by a step you choose (say +100 every 2 weeks) until it reaches
+  your maintenance calories, then Helia rolls you into maintaining on its own.
+  While the climb runs there is no goal weight hanging over you — small ups
+  and downs near your end-of-cut weight are expected, and Helia shows them in
+  quiet grey instead of scoring them. The Weight tab shows where the ramp
+  stands and when the next increase lands.
+- **Bigger celebrations, and a rainbow.** Milestones are now quarters of your
+  cut — 25%, 50%, 75% — each with confetti and a headline that pops in the
+  colour your progress ring has warmed to. The ring itself warms from teal
+  toward gold as you close in, and when you reach your goal it becomes a
+  rainbow ring, and stays one. (The old every-5-lb messages are retired.)
 - **A day report you can share.** Meals tab → *View day report*, right under
   the day&rsquo;s totals: one page with the day&rsquo;s weigh-in and when you logged it, your
   calorie total against your target, macros, and every meal with its items and
