@@ -42,6 +42,16 @@ small celebrations when a milestone or a calorie target is met.
 - Live: <https://helia-plum.vercel.app>
 - Five tabs: **Weight** (`/`), **Calendar**, **Meals**, **Friends**, **Settings**
 
+**State of play, 2026-08-25.** The phases release is **deployed to production**:
+reverse dieting → maintenance (Settings → Phase), quarter milestones with
+confetti and the rainbow goal ring, and the Next 16.3.3 upgrade that fixed
+saves hanging on "Saving" (see Gotchas). Post-deploy smoke: throwaway account
+signed up on the live site, two weigh-ins saved, Settings phase section
+present, account deleted. `milestoneLbs` joined `Encouragement` on the
+awaiting-DROP list. The owner has not yet started their own reverse phase —
+their goal celebration (rainbow ring, Start reverse dieting button) fires the
+next time they open the Weight tab.
+
 **State of play, 2026-08-12.** Six accounts: the owner plus Jerry, Matthew,
 Saleh, fatboy and Nyan Lin Htet. Spider Man and Nahian were deleted on
 2026-08-12 — no longer testing, on the owner's instruction (one weigh-in and
