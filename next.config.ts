@@ -2,11 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    // Lets React's <ViewTransition> crossfade one tab into the next. The
-    // browser does the work, so this is the entire cost of the feature —
-    // no animation library, nothing added to the bundle. Where it is not
-    // supported the app just does not animate.
-    viewTransition: true,
+    // React's <ViewTransition> (the tab crossfade) needs no flag since Next
+    // 16.3 — it works in the App Router with no configuration.
 
     // Let a tab you have already opened come back from the client cache
     // instead of being refetched. Switching tabs was ~355ms of round trip

@@ -39,6 +39,7 @@ export function MilestoneBanner({
 
   const pct =
     milestone === null ? null : milestone.kind === "goal" ? 100 : milestone.pct;
+
   useEffect(() => {
     if (pct !== null) void acknowledgeMilestoneAction(pct);
   }, [pct]);

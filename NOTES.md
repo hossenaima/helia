@@ -1164,6 +1164,24 @@ Grouped by where they bite.
 
 ### Next.js / React
 
+- **A fast server action can hang forever on "Saving" — fixed by Next 16.3.**
+  On 16.2.12, roughly half of all weigh-in saves that crossed a milestone
+  stalled indefinitely: the write landed, the action's response arrived **in
+  full** (verified at the CDP layer), and React silently never applied it — no
+  console error, no page error, nothing. A known React 19 Fiber race
+  (vercel/next.js discussion #88767): an action that resolves quickly gets its
+  boundary marked suspended and the update is never replayed. Do not debug the
+  app when this signature appears — write landed + response complete + UI
+  stuck pending is the engine bug. Everything app-side was formally exonerated
+  first, at some cost: the ack-action-in-useEffect, the confetti canvas, the
+  ViewTransition template, headless rendering, and the banner's own markup (a
+  bare `<div>` hung identically). The milestone correlation was real but
+  indirect — those responses hit the race window; the fix was upgrading Next
+  (16.3.3 bundles a patched React canary), after which 12/12 crossing saves
+  applied cleanly at ~470ms. **`experimental.viewTransition` is gone in 16.3**
+  — view transitions need no flag now, and the old key fails the config
+  type-check.
+
 - **`"use server"` files may export only async functions.** Constants and
   parsers must live in a separate module.
 - **Client components cannot import anything that pulls in `server-only`.**

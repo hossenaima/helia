@@ -38,6 +38,10 @@ node scripts/announce.mjs "…" "…" --send                                # to
   colour your progress ring has warmed to. The ring itself warms from teal
   toward gold as you close in, and when you reach your goal it becomes a
   rainbow ring, and stays one. (The old every-5-lb messages are retired.)
+- **Saving no longer gets stuck.** A save could occasionally hang on
+  &ldquo;Saving&rdquo; forever even though the number was recorded — most
+  likely on the very save that earned a celebration. Framework bug, fixed by
+  an upgrade; reloading always showed the weigh-in had landed.
 - **A day report you can share.** Meals tab → *View day report*, right under
   the day&rsquo;s totals: one page with the day&rsquo;s weigh-in and when you logged it, your
   calorie total against your target, macros, and every meal with its items and
