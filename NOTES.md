@@ -61,7 +61,12 @@ in tracking mode), test account deleted after. Same release: the Meals tab's
 "log again" reuse list was removed (see Tried and rejected), and a dialog
 centering bug was fixed — Tailwind's `relative` on the milestone `<dialog>`
 overrode the UA's `position: fixed` on modals, stranding the pop-up at the
-top of the page instead of centered. **Not yet deployed.**
+top of the page instead of centered. **Deployed to production 2026-08-28.**
+Post-deploy smoke on the live site (11 checks): throwaway account signed up,
+all five signed-in tabs loaded, no Phase section in Settings, tracking
+toggle present, quarter pop-up fired centered, ring at 25%; account deleted.
+(First `vercel deploy --prod` attempt returned a transient "Not authorized";
+the immediate retry succeeded.)
 
 **State of play, 2026-08-25.** The phases release is **deployed to production**:
 reverse dieting → maintenance (Settings → Phase), quarter milestones with
