@@ -57,7 +57,11 @@ already 100, so the trophy ring greets them). The phase columns (`phase`, the
 four ramp fields, `phaseAnchorLbs`) joined the awaiting-DROP list. Verified
 in the browser end to end on a test account (22 checks: quarter pop-up,
 ring at 25/75/100, auto-switch at goal, toggle both ways, no verdict colours
-in tracking mode), test account deleted after. **Not yet deployed.**
+in tracking mode), test account deleted after. Same release: the Meals tab's
+"log again" reuse list was removed (see Tried and rejected), and a dialog
+centering bug was fixed — Tailwind's `relative` on the milestone `<dialog>`
+overrode the UA's `position: fixed` on modals, stranding the pop-up at the
+top of the page instead of centered. **Not yet deployed.**
 
 **State of play, 2026-08-25.** The phases release is **deployed to production**:
 reverse dieting → maintenance (Settings → Phase), quarter milestones with
@@ -86,7 +90,7 @@ on the owner: the fixed chat composer with the iOS keyboard up, on a real
 iPhone, before the next announcement email goes out. Working: weigh-ins with a trend chart, a lb/kg switch and the time each one was
 logged, the calendar —
 which now shows each day's reading — and Apple Health import, meals with Gemini
-estimation and one-tap reuse of a past meal, friends with account-wide weight
+estimation, friends with account-wide weight
 sharing and **per-friend** food sharing, a week chart behind each friend card,
 a persistent per-friend chat (90-day retention) in place of the old 12-hour
 notes, web push reminders on an hourly GitHub Actions sweep, and milestone
@@ -426,17 +430,12 @@ hundreds of calories for an individual, and a wrong target would quietly skew
 the budget and every progress bar. Blank targets hide those features rather than
 guessing.
 
-**A logged meal is a saved meal.** There is no separate saved-meals table: a
-meal already holds its description and its priced-out items, so logging it
-again is a copy. `repeatMealAction` deliberately does not re-run the estimator
-— the items were already paid for, and re-estimating the same description would
-spend a request to get an answer we have and might get a slightly different
-one, making the same breakfast drift day to day. The list is deduplicated by
-name, most recent wins, because the useful question is "things I eat".
+**The "log again" reuse list was removed on 2026-08-28** — the owner's call,
+per "minimal, and proven before extended". See *Tried and rejected* for what
+it was and where it lives if wanted back.
 
 **The button said "Save meal" and meant "log it today".** That reads as "keep
-this for later", which is what people expected it to do. It says "Log it" now,
-and the reuse list is what "saved" turned out to mean.
+this for later", which is what people expected it to do. It says "Log it" now.
 
 **Itemise what the person can change, not what the dish is called.** If a
 description says what went into something, each component gets its own line —
@@ -522,8 +521,8 @@ what lets the card say "read from your photo" instead of "from your
 description", and it will be what answers "are photo estimates any good?" later.
 
 **A photo with no words writes its own description**, from the item names the
-model returned. Otherwise the card, the reuse list and the digest would all show
-a meal with nothing written on it.
+model returned. Otherwise the card and the digest would both show a meal with
+nothing written on it.
 
 **How wrong it is, measured — `scripts/eval-photo.mts`.** Prompt work on an
 estimator is unfalsifiable without ground truth, and inventing reference numbers
@@ -1627,6 +1626,16 @@ Duolingo, Apple Fitness), not yet implemented:
   model's own density recall is 14% off and unbiased, while the error that
   matters is +37% and one-directional, and USDA's top hit priced streaky bacon
   as rendered pork fat. See *Reading a meal from a photograph*.
+- **The "log again" reuse list** — removed 2026-08-28 on the owner's call.
+  A row of past meals on the Meals tab, deduplicated by name, that copied a
+  meal's priced items onto today with one tap (`repeatMealAction`,
+  `repeatableMeals`, `SavedMeals` — all in the history at the removal
+  commit). The design reasoning worth keeping if it returns: there was no
+  separate saved-meals table (a logged meal already holds its items, so
+  reuse is a copy), and the copy deliberately never re-ran the estimator —
+  re-estimating the same description spends a request to get an answer
+  already paid for, and might get a slightly different one, making the same
+  breakfast drift day to day.
 - **Reverse dieting and maintenance phases** — shipped 2026-08-25, removed
   2026-08-28 before ever being announced, on the owner's "make it simpler".
   A calorie ramp advanced by the hourly sweep, a phase state machine, a

@@ -31,6 +31,10 @@ node scripts/announce.mjs "…" "…" --send                                # to
   good. Milestones are quarters of your cut, each celebrated with a pop-up
   and confetti; tap it away and it never repeats. (The old every-5-lb
   messages are retired.)
+- **The &ldquo;log again&rdquo; list is gone.** The row of past meals at the
+  bottom of the Meals tab has been removed to keep the tab simple — logging a
+  meal is now always the form (or a photo). Nothing already logged has
+  changed.
 - **Just track, no goal.** At the bottom of the Weight tab: switch to daily
   tracking any time — no goal hanging over you, no &ldquo;to go&rdquo;, no
   up/down colours, just your log, chart and streak. Reaching your goal

@@ -5,13 +5,11 @@ import { currentUser } from "@/lib/auth";
 import { addDays, formatDayLong, isDayKey, todayIn } from "@/lib/dates";
 import { getEstimator } from "@/lib/ai/estimator";
 import { mealNutrition, sumNutrition } from "@/lib/nutrition";
-import { repeatableMeals } from "@/lib/meals";
 import { PageTitle } from "@/components/page-title";
 import { MealForm } from "@/components/meal-form";
 import { DayTotals } from "@/components/day-totals";
 import { ActiveBurnField } from "@/components/active-burn-field";
 import { MealCard } from "@/components/meal-card";
-import { SavedMeals } from "@/components/saved-meals";
 
 export default async function MealsPage(props: PageProps<"/meals">) {
   const user = await currentUser();
@@ -25,7 +23,7 @@ export default async function MealsPage(props: PageProps<"/meals">) {
   // The trailing week is fetched alongside the day so the rolling buffer can be
   // computed without a second round trip.
   const weekStart = addDays(date, -6);
-  const [meals, dayLog, weekMeals, recent] = await Promise.all([
+  const [meals, dayLog, weekMeals] = await Promise.all([
     prisma.meal.findMany({
       where: { userId: user.id, date },
       include: { items: true },
@@ -37,14 +35,6 @@ export default async function MealsPage(props: PageProps<"/meals">) {
     prisma.meal.findMany({
       where: { userId: user.id, date: { gte: weekStart, lte: date } },
       include: { items: true },
-    }),
-    // The recent past, for the "log again" list. Newest first, and capped —
-    // `repeatableMeals` only needs enough rows to find a few distinct names.
-    prisma.meal.findMany({
-      where: { userId: user.id },
-      include: { items: true },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      take: 60,
     }),
   ]);
 
@@ -124,7 +114,6 @@ export default async function MealsPage(props: PageProps<"/meals">) {
         </p>
       )}
 
-      <SavedMeals meals={repeatableMeals(recent)} date={date} />
     </>
   );
 }

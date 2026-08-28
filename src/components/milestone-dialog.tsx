@@ -47,7 +47,12 @@ export function MilestoneDialog({ milestone }: { milestone: Milestone }) {
       // Close via the button, Escape, or anything else all land here — the
       // acknowledgment cannot be skipped by dismissing some other way.
       onClose={() => void acknowledgeMilestoneAction(pct)}
-      className="confirm relative overflow-hidden text-center"
+      // No `relative` here: a modal dialog is position: fixed by UA style —
+      // which is both what centers it (inset 0 + .confirm's margin auto) and
+      // what makes it the containing block for the confetti canvas. A
+      // position utility would override the fixed and strand the dialog
+      // in-flow at the top of the page.
+      className="confirm overflow-hidden text-center"
       aria-label="Milestone"
     >
       <ConfettiBurst />
