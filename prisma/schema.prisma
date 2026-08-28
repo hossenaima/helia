@@ -114,28 +114,26 @@ model User {
 
   /// Largest progress milestone already congratulated: 0, 25, 50, 75 or 100
   /// (the goal itself). Monotonic for the same reason `milestoneLbs` was —
-  /// re-losing the same stretch must not replay the party.
+  /// re-losing the same stretch must not replay the party. 100 is also what
+  /// keeps the full rainbow ring as a trophy in daily tracking mode.
   milestonePct Int @default(0)
 
-  /// Post-cut phase. Null = cutting (the default life of an account),
-  /// "reverse" = the calorie ramp below is in progress, "maintain" = ramp
-  /// done, holding at rampEndKcal.
-  phase String?
+  /// Daily tracking mode: no goal UI and no up/down verdicts — just the log.
+  /// Set automatically when the goal celebration is acknowledged, toggled by
+  /// hand on the Weight tab, and cleared by saving a new goal weight.
+  /// `goalWeightLbs` is untouched either way — the mode hides it, never
+  /// erases it.
+  trackingOnly Boolean @default(false)
 
-  /// The reverse-dieting ramp: the hourly sweep bumps `calorieTarget` by
-  /// `rampStepKcal` every `rampIntervalDays` until it reaches `rampEndKcal`,
-  /// then flips `phase` to "maintain". `rampLastStepOn` is the day key (in the
-  /// user's own timezone) of the last bump — what makes the at-least-once
-  /// sweep idempotent, same pattern as `lastRemindedOn`.
+  /// Orphaned 2026-08-28 when reverse dieting and maintenance were removed
+  /// (daily tracking mode replaced them); nothing reads any of these. Awaiting
+  /// their post-deploy DROP — same two-release rule as every column drop here.
+  phase            String?
   rampEndKcal      Int?
   rampStepKcal     Int?
   rampIntervalDays Int?
   rampLastStepOn   String?
-
-  /// Weight (lbs) when the cut ended and reverse dieting began. During the
-  /// reverse phase readings within ±1 lb of this render neutral — expected
-  /// regain while calories climb is not scored for or against.
-  phaseAnchorLbs Float?
+  phaseAnchorLbs   Float?
 
   /// Day key of the last reminder actually sent. The schedulers that call the
   /// reminder route are all at-least-once, so this is what keeps a retry from

@@ -42,15 +42,30 @@ small celebrations when a milestone or a calorie target is met.
 - Live: <https://helia-plum.vercel.app>
 - Five tabs: **Weight** (`/`), **Calendar**, **Meals**, **Friends**, **Settings**
 
+**State of play, 2026-08-28.** Phases are **removed again** — before they were
+ever announced (their UNANNOUNCED entry was deleted, not rewritten; testers
+never heard of them). In their place: **daily tracking mode**
+(`User.trackingOnly` — no goal UI, no up/down verdicts, toggled at the bottom
+of the Weight tab, entered automatically when the goal celebration is
+acknowledged), the ring became a **progressively revealed rainbow** (no more
+warming stroke or per-quarter headline colours), and milestone celebrations
+became a **dismissable `<dialog>` pop-up** with confetti — dismissing is what
+advances `milestonePct` now. The migration mapped any account with a phase to
+`trackingOnly = true`: that was the owner alone, who had started a reverse
+phase since the 08-25 note below was written (and whose `milestonePct` was
+already 100, so the trophy ring greets them). The phase columns (`phase`, the
+four ramp fields, `phaseAnchorLbs`) joined the awaiting-DROP list. Verified
+in the browser end to end on a test account (22 checks: quarter pop-up,
+ring at 25/75/100, auto-switch at goal, toggle both ways, no verdict colours
+in tracking mode), test account deleted after. **Not yet deployed.**
+
 **State of play, 2026-08-25.** The phases release is **deployed to production**:
 reverse dieting → maintenance (Settings → Phase), quarter milestones with
 confetti and the rainbow goal ring, and the Next 16.3.3 upgrade that fixed
 saves hanging on "Saving" (see Gotchas). Post-deploy smoke: throwaway account
 signed up on the live site, two weigh-ins saved, Settings phase section
 present, account deleted. `milestoneLbs` joined `Encouragement` on the
-awaiting-DROP list. The owner has not yet started their own reverse phase —
-their goal celebration (rainbow ring, Start reverse dieting button) fires the
-next time they open the Weight tab.
+awaiting-DROP list.
 
 **State of play, 2026-08-12.** Six accounts: the owner plus Jerry, Matthew,
 Saleh, fatboy and Nyan Lin Htet. Spider Man and Nahian were deleted on
@@ -174,7 +189,10 @@ Days are `"YYYY-MM-DD"` strings, never timestamps. Weights are always stored in
 - **User** — name/handle/`username`, `setupComplete`, `pinHash`/`pinSalt`, goal
   and target figures, `units`,
   `timezone`, `notifyWeighIn`/`notifyFriends`/`reminderHour`, `lastRemindedOn`,
-  `milestoneLbs` (largest celebration already shown), `shareWeight`
+  `milestonePct` (largest quarter already congratulated; 100 keeps the trophy
+  ring), `trackingOnly` (daily tracking mode — no goal UI, no verdicts),
+  `shareWeight`. Orphaned, awaiting DROP: `milestoneLbs` and the six phase
+  columns
 - **WeightEntry** — one per `(userId, date)`; re-submitting corrects it. Carries
   `source` (`live` | `health` | `backfill`), which decides whether the day
   counts toward a streak
@@ -255,9 +273,16 @@ largest one already congratulated. Without it the same "10 lb down" greets you
 every morning, which turns a moment into wallpaper. Monotonic, so regaining and
 re-losing the same five pounds does not replay it.
 
-**Not a modal.** The reason for opening the Weight tab is the number; a dialog
-in front of it celebrates *at* the user rather than with them. It is a card in
-the flow with one slow sweep of the accent, and a dismiss.
+**A modal after all — reversed by the owner, 2026-08-28.** The first cut
+reasoned that a dialog in front of the number celebrates *at* the user rather
+than with them, and shipped the celebration as a card in the flow. The owner
+asked for a pop-up with confetti instead; it is a native `<dialog>` via
+`showModal()` (same machinery as the friend-removal confirm — top layer,
+Escape, backdrop for free), and **dismissing it is the acknowledgment**: the
+card acknowledged on render, but a modal not yet closed has not been seen, so
+`milestonePct` advances on close (button, Escape, anything — the `onClose`
+event catches them all). Acknowledging the goal also flips `trackingOnly` on:
+the same write is the door into daily tracking.
 
 **"On target" needs food in it.** A day under target with nothing logged is an
 empty day, not an achievement, so the calorie note requires at least one meal.
@@ -269,52 +294,47 @@ overnight jump is water and digestion whether or not anything was written down �
 and a bad morning after an unlogged evening is the one *most* in need of the
 note. A flagged meal now only decides whether the banner names a culprit.
 
-### Phases: reverse dieting and maintenance
+### Daily tracking mode and the rainbow ring
 
-Added 2026-08-25, on the owner's request, for the life after a cut: the
-calorie target climbs a step at a time back to maintenance, then holds.
+Replaced reverse dieting and maintenance on 2026-08-28, on the owner's call
+— "make it simpler". Life after a cut (or instead of one) is now a mode, not
+a machine: `User.trackingOnly`.
 
-**The ramp writes `calorieTarget`; nothing else changed how it is read.** Every
-budget, report, digest and celebration keeps reading the one column it always
-read. The hourly reminders sweep advances the ramp (`rampStep` in
-`src/lib/phase.ts`, checked by `scripts/check-phase.mts`) — it already ran
-hourly for per-timezone reasons and is already at-least-once-safe, and
-`rampLastStepOn` makes the step idempotent the same way `lastRemindedOn` does.
-The ramp query is separate from the reminder loop, which only sees
-push-subscribed accounts.
+**Tracking mode hides, never erases.** While it is on, `goalWeightLbs` is not
+read into any goal UI (ring, "X to go", projection, chart goal line) and
+every delta on your own Weight tab renders neutral — a number, not a verdict.
+The gating lives in `(app)/page.tsx` where `goalWeightLbs` is read, exactly
+the pattern the reverse phase used. Saving a *changed, non-null* goal weight
+in Settings is the way back — a new goal is a return to goal mode — and the
+toggle at the bottom of the Weight tab flips it freely both ways.
 
-**One step per pass, never a catch-up.** Coming back from six weeks away bumps
-once and the cadence resumes — reverse dieting is gradual on purpose, and
-three missed steps at once would defeat it. A target already at or past
-`rampEndKcal` (edited by hand, say) clamps to the end and rolls the phase to
-"maintain"; that rollover *is* the maintenance transition, there is no other
-machinery.
+**Reaching the goal enters it automatically.** `acknowledgeMilestoneAction`
+at 100 sets `trackingOnly` in the same write that records the milestone; the
+100% pop-up says so. There is no "what now?" fork to answer — the answer is
+always "just keep tracking", and the toggle is the undo.
 
-**There is no goal weight during reverse dieting — the owner's explicit call.**
-`goalWeightLbs` is untouched in the database and simply not read into the goal
-UI (ring percent, "to go", projection, chart goal line) while
-`phase = "reverse"`; it all comes back in maintenance. Instead
-`phaseAnchorLbs` records the weight the cut ended at, and readings within
-**±1 lb** of it render neutral — muted ink, no up/down colour — because
-expected regain while calories climb is the plan working, not a setback.
-Outside the band the normal colours return: a real drift is still information.
+**The ring is the rainbow, revealed as far as progress has come.** No more
+warming stroke: `.ring-rainbow` is the full-circle conic ombre (a conic
+gradient cannot be an SVG stroke, so it is a div masked to the ring band),
+with a second, angular mask layer doing the reveal — `mask-composite:
+intersect`, the reveal angle in `--ring-pct`, registered via `@property` so
+it animates. **At 100 the angular mask comes off entirely
+(`.ring-rainbow-full`) rather than being set to 100%: the conic mask's seam
+leaves a hairline gap at twelve o'clock in what should read as a closed
+circle** — found by looking at the screenshot, not the DOM. The completed
+ring stays as the trophy (`milestonePct === 100`), including in tracking
+mode; someone who toggles tracking without ever finishing a cut has no ring
+at all.
 
-**Milestones are quarters of the cut now, not 5 lb steps** — also the owner's
-call, wanting bigger moments: confetti (hand-rolled canvas in
-`confetti-burst.tsx`, ~70 rectangles once, skipped under reduced motion — the
-no-animation-library rule holds), headlines that pop in the colour the ring
-has warmed to, and no sub-line. The ring stroke warms from `--trace` toward
-`--reward` with progress, and at goal becomes a full-circle rainbow ombre (a
-conic-gradient div masked to the ring band — a conic gradient cannot be an
-SVG stroke) that stays as a trophy. This deliberately bends "colour is
-reserved for data"; the CSS comment at `--reward` says so. `milestonePct`
-(0/25/50/75/100) is the monotonic memory, and the goal now acknowledges
-itself as 100 — the old goal banner never acknowledged at all and would
-regreet every morning. **Changing the goal weight resets `milestonePct`**: a
-new goal is a new cut, new quarters, and the rainbow steps down. Re-saving an
-unchanged form must not replay anything, so the reset only fires on a real
-change. `milestoneLbs` is orphaned — nothing reads it — awaiting its
-post-deploy DROP alongside `Encouragement`.
+**Milestones are quarters of the cut** (owner's call, 2026-08-25, kept):
+confetti (hand-rolled canvas in `confetti-burst.tsx`, ~70 rectangles once,
+skipped under reduced motion — the no-animation-library rule holds), now in
+a pop-up (see Celebration below). `milestonePct` (0/25/50/75/100) is the
+monotonic memory; the goal acknowledges itself as 100. **Changing the goal
+weight resets `milestonePct`**: a new goal is a new cut, and the rainbow
+steps down. Re-saving an unchanged form must not replay anything, so the
+reset only fires on a real change. `milestoneLbs` is orphaned — awaiting its
+post-deploy DROP alongside `Encouragement` and now the phase columns.
 
 ### Streaks
 
@@ -1607,6 +1627,14 @@ Duolingo, Apple Fitness), not yet implemented:
   model's own density recall is 14% off and unbiased, while the error that
   matters is +37% and one-directional, and USDA's top hit priced streaky bacon
   as rendered pork fat. See *Reading a meal from a photograph*.
+- **Reverse dieting and maintenance phases** — shipped 2026-08-25, removed
+  2026-08-28 before ever being announced, on the owner's "make it simpler".
+  A calorie ramp advanced by the hourly sweep, a phase state machine, a
+  ±1 lb neutral band around an anchor weight — all machinery answering "what
+  happens after the goal?", which daily tracking mode (`trackingOnly`) now
+  answers with no moving parts. The ramp logic is in the history
+  (`src/lib/phase.ts`, deleted 2026-08-28) if a calorie schedule is ever
+  wanted again; its columns await their DROP.
 
 ---
 
@@ -1633,10 +1661,13 @@ Duolingo, Apple Fitness), not yet implemented:
   oversight. The flag exists for when testing ends.
 - Supabase is in **us-west-1** while the owner is US East — ~70ms of avoidable
   latency per request. Cheap to fix while the database is small.
-- **Two orphaned columns/tables await their post-deploy DROP**: the
-  `Encouragement` table (since the chat release) and now `User.milestoneLbs`
-  (since milestones became quarters, 2026-08-25). Both only after the code
-  that stopped reading them is confirmed live, per the two-release rule.
+- **Orphaned columns/tables await their post-deploy DROP**: the
+  `Encouragement` table (since the chat release), `User.milestoneLbs` (since
+  milestones became quarters, 2026-08-25), and the six phase columns —
+  `phase`, `rampEndKcal`, `rampStepKcal`, `rampIntervalDays`,
+  `rampLastStepOn`, `phaseAnchorLbs` (since phases were removed, 2026-08-28).
+  All only after the code that stopped reading them is confirmed live, per
+  the two-release rule.
 - Vercel is **not Git-connected**; deploys are `npx vercel deploy --prod`.
   Pushing to GitHub does not deploy — but it *is* what feeds the reminder
   workflow, so the two now have to stay in step. The sweep first ran on

@@ -25,19 +25,18 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
-- **Reverse dieting, then maintenance.** Hit your goal? Settings → *Phase* (or
-  the button right on the goal celebration) starts a reverse diet: your calorie
-  target climbs by a step you choose (say +100 every 2 weeks) until it reaches
-  your maintenance calories, then Helia rolls you into maintaining on its own.
-  While the climb runs there is no goal weight hanging over you — small ups
-  and downs near your end-of-cut weight are expected, and Helia shows them in
-  quiet grey instead of scoring them. The Weight tab shows where the ramp
-  stands and when the next increase lands.
-- **Bigger celebrations, and a rainbow.** Milestones are now quarters of your
-  cut — 25%, 50%, 75% — each with confetti and a headline that pops in the
-  colour your progress ring has warmed to. The ring itself warms from teal
-  toward gold as you close in, and when you reach your goal it becomes a
-  rainbow ring, and stays one. (The old every-5-lb messages are retired.)
+- **A rainbow that fills as you go.** The progress ring on the Weight tab is
+  now a rainbow revealing itself as you close in — a quarter of the circle at
+  25%, half at 50% — and at your goal the circle completes and stays, for
+  good. Milestones are quarters of your cut, each celebrated with a pop-up
+  and confetti; tap it away and it never repeats. (The old every-5-lb
+  messages are retired.)
+- **Just track, no goal.** At the bottom of the Weight tab: switch to daily
+  tracking any time — no goal hanging over you, no &ldquo;to go&rdquo;, no
+  up/down colours, just your log, chart and streak. Reaching your goal
+  switches you there automatically (the rainbow stays as your trophy), and
+  saving a goal weight in Settings brings goal mode back. Your numbers are
+  kept either way.
 - **Saving no longer gets stuck.** A save could occasionally hang on
   &ldquo;Saving&rdquo; forever even though the number was recorded — most
   likely on the very save that earned a celebration. Framework bug, fixed by

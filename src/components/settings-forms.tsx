@@ -6,12 +6,9 @@ import {
   saveEmailAction,
   setDigestAction,
   saveSettingsAction,
-  startReversePhaseAction,
-  stopPhaseAction,
   type SettingsResult,
 } from "@/app/actions/settings";
 import { toLbs, type Units } from "@/lib/units";
-import { addDays, formatMonthDay } from "@/lib/dates";
 
 /** Clinical rule-of-thumb floors, kept here so both cautions read from one place. */
 const MIN_CALORIES = 1200;
@@ -166,149 +163,6 @@ export function GoalForm({
       >
         {pending ? "Saving" : "Save goal"}
       </button>
-
-      <Status state={state} />
-    </form>
-  );
-}
-
-/**
- * Reverse dieting and maintenance.
- *
- * Three states of one card: not in a phase (the start form), climbing (the
- * plan and a stop button), maintaining (the resting state and the same exit).
- * The hourly sweep does the actual stepping; this only writes the plan.
- */
-export function PhaseForm({
-  phase,
-  units,
-  calorieTarget,
-  rampEndKcal,
-  rampStepKcal,
-  rampIntervalDays,
-  rampLastStepOn,
-  anchorDefault,
-}: {
-  phase: string | null;
-  units: Units;
-  calorieTarget: number | null;
-  rampEndKcal: number | null;
-  rampStepKcal: number | null;
-  rampIntervalDays: number | null;
-  rampLastStepOn: string | null;
-  /** Latest weigh-in in display units — the weight the cut ended at. */
-  anchorDefault: number | null;
-}) {
-  const [state, formAction, pending] = useActionState(
-    startReversePhaseAction,
-    INITIAL,
-  );
-
-  if (phase === "reverse") {
-    return (
-      <div className="mt-4 rounded-xl border border-rule bg-surface p-5">
-        <p className="text-sm font-bold">Reverse dieting</p>
-        <p className="tnum mt-1 text-sm text-ink-muted">
-          {calorieTarget?.toLocaleString()} → {rampEndKcal?.toLocaleString()}{" "}
-          kcal, +{rampStepKcal} every {rampIntervalDays} days.
-          {rampLastStepOn !== null && rampIntervalDays !== null && (
-            <>
-              {" "}
-              Next increase ~
-              {formatMonthDay(addDays(rampLastStepOn, rampIntervalDays))}.
-            </>
-          )}
-        </p>
-        <p className="mt-2 text-xs text-ink-muted">
-          When the target reaches{" "}
-          {rampEndKcal?.toLocaleString() ?? "maintenance"} kcal this rolls into
-          maintenance on its own. Small ups and downs near your end-of-cut
-          weight are expected and not scored.
-        </p>
-        <form action={stopPhaseAction}>
-          <button type="submit" className="btn btn-quiet mt-4 w-full">
-            Stop reverse dieting
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  if (phase === "maintain") {
-    return (
-      <div className="mt-4 rounded-xl border border-rule bg-surface p-5">
-        <p className="text-sm font-bold">Maintaining</p>
-        <p className="tnum mt-1 text-sm text-ink-muted">
-          Holding at {calorieTarget?.toLocaleString()} kcal a day.
-        </p>
-        <form action={stopPhaseAction}>
-          <button type="submit" className="btn btn-quiet mt-4 w-full">
-            Back to plain tracking
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  return (
-    <form
-      action={formAction}
-      className="mt-4 rounded-xl border border-rule bg-surface p-5"
-    >
-      <p className="text-sm font-bold">Reverse dieting</p>
-      <p className="mt-1 text-xs text-ink-muted">
-        Done cutting? This raises your calorie target a step at a time until it
-        reaches maintenance, then holds it there. No goal weight while it runs —
-        small ups and downs near your end-of-cut weight are expected and not
-        scored.
-      </p>
-
-      {calorieTarget === null ? (
-        <p className="mt-4 text-sm text-ink-muted">
-          Set a calorie target above first — the climb starts from it.
-        </p>
-      ) : (
-        <>
-          <p className="tnum mt-4 text-sm text-ink-muted">
-            Starting from your current target of {calorieTarget.toLocaleString()}{" "}
-            kcal.
-          </p>
-          <NumberField
-            id="endKcal"
-            name="endKcal"
-            label="Maintenance calories"
-            hint="Where the climb ends."
-            defaultValue={null}
-          />
-          <NumberField
-            id="stepKcal"
-            name="stepKcal"
-            label="Increase by (kcal)"
-            defaultValue={100}
-          />
-          <NumberField
-            id="intervalDays"
-            name="intervalDays"
-            label="Every (days)"
-            hint="7–28. Two weeks is a common pace."
-            defaultValue={14}
-          />
-          <NumberField
-            id="anchor"
-            name="anchor"
-            label={`End-of-cut weight (${units})`}
-            hint="Readings within ±1 lb of this stay neutral."
-            defaultValue={anchorDefault}
-          />
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-primary mt-6 w-full"
-          >
-            {pending ? "Starting" : "Start reverse dieting"}
-          </button>
-        </>
-      )}
 
       <Status state={state} />
     </form>

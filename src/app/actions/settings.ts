@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPin, requireUser, verifyPin } from "@/lib/auth";
 import { toLbs } from "@/lib/units";
-import { isValidTimezone, todayIn } from "@/lib/dates";
+import { isValidTimezone } from "@/lib/dates";
 import { passwordProblem } from "@/lib/credentials";
 
 export type SettingsResult = { ok: boolean; error?: string; message?: string };
@@ -57,8 +57,9 @@ export async function saveSettingsAction(
   } = parsed.data;
 
   // A different goal weight is a new cut: the quarter milestones and the
-  // finished-cut rainbow start over. Only on a real change — re-saving the
-  // form must not replay a celebration already had.
+  // finished-cut rainbow start over, and daily tracking mode ends — saving a
+  // goal is the way back into goal mode. Only on a real change — re-saving
+  // the form must not replay a celebration already had.
   const newGoalLbs = goalWeight === null ? null : toLbs(goalWeight, units);
   const goalChanged =
     (newGoalLbs === null) !== (user.goalWeightLbs === null) ||
@@ -73,6 +74,7 @@ export async function saveSettingsAction(
     data: {
       units,
       ...(goalChanged ? { milestonePct: 0 } : {}),
+      ...(goalChanged && newGoalLbs !== null ? { trackingOnly: false } : {}),
       goalWeightLbs: newGoalLbs,
       startWeightLbs: startWeight === null ? null : toLbs(startWeight, units),
       heightInches,
@@ -267,97 +269,45 @@ export async function setAvatarAction(
 /**
  * Record that a milestone has been congratulated, so it is not shown again.
  *
- * Called by the banner itself once it has been seen. Monotonic: gaining weight
- * back and losing it again does not replay the same congratulation. 100 is the
- * goal itself, the last milestone there is.
+ * Called when the pop-up is dismissed. Monotonic: gaining weight back and
+ * losing it again does not replay the same congratulation. 100 is the goal
+ * itself, the last milestone there is — and acknowledging it is also the door
+ * out of goal mode: from there the account just tracks day to day, with the
+ * full rainbow ring staying on as the trophy.
  */
 export async function acknowledgeMilestoneAction(pct: number): Promise<void> {
   const me = await requireUser();
   if (![25, 50, 75, 100].includes(pct) || pct <= me.milestonePct) return;
   await prisma.user.update({
     where: { id: me.id },
-    data: { milestonePct: pct },
+    data: { milestonePct: pct, ...(pct === 100 ? { trackingOnly: true } : {}) },
   });
+  // Re-render the Weight tab now: at 100 it has a whole mode to change into,
+  // and at a quarter the stale client cache must not replay the pop-up.
+  revalidatePath("/");
 }
 
-const reversePlanSchema = z.object({
-  endKcal: z.coerce.number().int().min(1000).max(10000),
-  stepKcal: z.coerce.number().int().min(25).max(500),
-  intervalDays: z.coerce.number().int().min(7).max(28),
-  anchor: z.coerce.number().positive(),
-});
-
 /**
- * Begin the reverse-dieting phase: calorie target climbs by a step every
- * interval until it reaches the end figure, then the account rolls over to
- * maintenance on its own. The anchor is the weight the cut ended at — readings
- * within ±1 lb of it render neutral while the ramp runs, because expected
- * regain is not something to score.
- *
- * There is no goal weight during reverse dieting; `goalWeightLbs` is left
- * exactly as it is and simply not shown until maintenance.
+ * The Weight tab's mode switch: daily tracking (no goal UI, no up/down
+ * verdicts) or goal mode. Goal weight and targets are kept either way —
+ * the mode decides what is shown, never what is stored.
  */
-export async function startReversePhaseAction(
+export async function setTrackingModeAction(
   _prev: SettingsResult,
   formData: FormData,
 ): Promise<SettingsResult> {
-  const user = await requireUser();
-
-  if (user.calorieTarget === null) {
-    return { ok: false, error: "Set a calorie target first — the ramp starts from it." };
-  }
-
-  const parsed = reversePlanSchema.safeParse({
-    endKcal: formData.get("endKcal"),
-    stepKcal: formData.get("stepKcal"),
-    intervalDays: formData.get("intervalDays"),
-    anchor: formData.get("anchor"),
-  });
-  if (!parsed.success) {
-    return { ok: false, error: "Check the plan numbers — something is not a number we can use." };
-  }
-  const { endKcal, stepKcal, intervalDays, anchor } = parsed.data;
-  if (endKcal <= user.calorieTarget) {
-    return {
-      ok: false,
-      error: `Maintenance calories need to be above your current target of ${user.calorieTarget}.`,
-    };
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      phase: "reverse",
-      rampEndKcal: endKcal,
-      rampStepKcal: stepKcal,
-      rampIntervalDays: intervalDays,
-      // The first bump lands one full interval from today.
-      rampLastStepOn: todayIn(user.timezone),
-      phaseAnchorLbs: toLbs(anchor, user.units),
-    },
-  });
-
-  revalidatePath("/");
-  revalidatePath("/settings");
-  return { ok: true, message: "Reverse dieting started." };
-}
-
-/** Leave the phase (reverse or maintenance) and go back to plain tracking.
- *  The calorie target stays wherever the ramp left it — it is still the
- *  number meals are budgeted against; only the schedule stops. */
-export async function stopPhaseAction(): Promise<void> {
   const me = await requireUser();
+  const on = formData.get("trackingOnly") === "1";
+
   await prisma.user.update({
     where: { id: me.id },
-    data: {
-      phase: null,
-      rampEndKcal: null,
-      rampStepKcal: null,
-      rampIntervalDays: null,
-      rampLastStepOn: null,
-      phaseAnchorLbs: null,
-    },
+    data: { trackingOnly: on },
   });
+
   revalidatePath("/");
   revalidatePath("/settings");
+  return {
+    ok: true,
+    message: on ? "Daily tracking on." : "Goal mode is back.",
+  };
 }

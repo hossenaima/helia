@@ -39,12 +39,6 @@
   /* Left saturated on purpose: it is what keeps the goal line separable from
      the trace for a deutan reader (ΔE 8.5). It appears once, dashed. */
   --goal: #9a3ba0; /* goal horizon */
-  /* Celebration only. The progress ring and the milestone headlines warm
-     toward this as a cut progresses — asked for by the owner (2026-08-25) as
-     a deliberate exception to "colour is reserved for data": progress is the
-     data here. Never carries meaning on its own anywhere else. */
-  --reward: #d9a514;
-
   --down: #3a6d4a; /* moving toward goal */
   --up: #97503c; /* moving away */
 
@@ -187,15 +181,18 @@ body {
   }
 }
 
-/* The goal arc drawing itself in. Offsetting the dash by its own length hides
-   the stroke completely, so winding it back to zero reveals the arc from the
-   twelve o'clock start rather than fading it in. */
-@keyframes ring-sweep {
+/* The rainbow arc drawing itself in: the reveal angle animates from nothing
+   up to the progress the server rendered. Registered so it interpolates —
+   an unregistered custom property snaps instead of animating. */
+@property --ring-pct {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@keyframes ring-fill {
   from {
-    stroke-dashoffset: var(--ring-arc);
-  }
-  to {
-    stroke-dashoffset: 0;
+    --ring-pct: 0%;
   }
 }
 
@@ -436,10 +433,6 @@ body {
   animation: celebrate 1400ms cubic-bezier(0.3, 0, 0.2, 1) 240ms both;
 }
 
-.ring-sweep {
-  animation: ring-sweep 900ms cubic-bezier(0.16, 0.85, 0.3, 1) 120ms both;
-}
-
 .nav-marker {
   transition: transform 240ms cubic-bezier(0.22, 0.8, 0.3, 1);
 }
@@ -547,41 +540,19 @@ body {
 }
 
 @layer components {
-  /* Milestone headlines pop in the same colour the ring has warmed to at that
-     point — the card and the ring agree about how far along you are. */
-  .milestone-pop-25 {
-    color: color-mix(in oklab, var(--reward) 30%, var(--trace));
-  }
-  .milestone-pop-50 {
-    color: color-mix(in oklab, var(--reward) 55%, var(--trace));
-  }
-  .milestone-pop-75 {
-    color: color-mix(in oklab, var(--reward) 80%, var(--trace));
-  }
+  /* The goal ring: the full-circle rainbow ombre, revealed from twelve
+     o'clock as far as progress has come (`--ring-pct`), and complete at the
+     goal — where it stays, as the finished cut's trophy. A deliberate bend of
+     "colour is reserved for data": progress is the data here, and this is the
+     one place it appears (owner's call, 2026-08-25; simplified from the
+     warming stroke to a plain fill 2026-08-28).
 
-  /* The goal wears the rainbow itself: gradient text, same hues as the ring's
-     ombre. `color: transparent` is what lets the background show through the
-     glyphs; anything that cannot clip falls back to the reward gold. */
-  .rainbow-text {
-    color: var(--reward);
-    background-image: linear-gradient(
-      100deg,
-      #c95f52,
-      #d9a514,
-      #3a9d5d,
-      #4e86e0,
-      #ae5fb0
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  /* The finished cut's trophy: the full ring as a rainbow ombre sweeping once
-     around. A conic gradient cannot be an SVG stroke, so this is a div masked
-     down to the ring's band. The mask percentages assume the ring's default
-     geometry (168px, 12px stroke — band from 85% out); if the ring is ever
-     drawn at another size, derive these instead of copying them. */
+     A conic gradient cannot be an SVG stroke, so this is a div masked down to
+     the ring's band by the radial layer, with the conic layer doing the
+     angular reveal; `mask-composite: intersect` keeps only where both agree.
+     The radial percentages assume the ring's default geometry (168px, 12px
+     stroke — band from 85% out); if the ring is ever drawn at another size,
+     derive these instead of copying them. */
   .ring-rainbow {
     border-radius: 9999px;
     background: conic-gradient(
@@ -593,7 +564,27 @@ body {
       #ae5fb0,
       #c95f52
     );
-    mask: radial-gradient(closest-side, transparent 85%, #000 86%);
-    -webkit-mask: radial-gradient(closest-side, transparent 85%, #000 86%);
+    mask-image:
+      conic-gradient(#000 0 var(--ring-pct), transparent var(--ring-pct)),
+      radial-gradient(closest-side, transparent 85%, #000 86%);
+    mask-composite: intersect;
+    -webkit-mask-image:
+      conic-gradient(#000 0 var(--ring-pct), transparent var(--ring-pct)),
+      radial-gradient(closest-side, transparent 85%, #000 86%);
+    -webkit-mask-composite: source-in;
+    animation: ring-fill 900ms cubic-bezier(0.16, 0.85, 0.3, 1) 120ms both;
+  }
+
+  /* The completed ring. The angular reveal is dropped, not set to 100%: the
+     conic mask's start/end seam leaves a hairline gap at twelve o'clock in
+     what should read as a closed circle. */
+  .ring-rainbow-full {
+    mask-image: radial-gradient(closest-side, transparent 85%, #000 86%);
+    -webkit-mask-image: radial-gradient(
+      closest-side,
+      transparent 85%,
+      #000 86%
+    );
+    animation: none;
   }
 }

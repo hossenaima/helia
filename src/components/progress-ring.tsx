@@ -5,15 +5,12 @@
  * number answers. The percentage is also written out, because an arc alone is
  * hard to read precisely.
  *
- * The arc sweeps up to its value when the tab opens. Pure CSS: the dash offset
- * animates from a full circumference (empty) to zero (the drawn length), so
- * nothing has to be measured or tweened in JavaScript, and the global
- * reduced-motion override switches it off along with everything else.
- *
- * The stroke warms from the trace colour toward the reward gold as progress
- * climbs — approaching the goal is visible every morning, not only at the
- * quarters. `complete` swaps the arc for the full-circle rainbow ombre: the
- * finished cut's trophy, permanent until a new goal starts a new cut.
+ * The arc is the rainbow itself, revealed from twelve o'clock as far as
+ * progress has come — a conic gradient cannot be an SVG stroke, so it is a div
+ * masked down to the ring's band, with a second, angular mask doing the
+ * reveal (see `.ring-rainbow` in globals.css). At the goal the circle is
+ * complete and stays complete: the finished cut's trophy, permanent until a
+ * new goal starts a new cut. The SVG underneath only draws the resting track.
  */
 export function ProgressRing({
   percent,
@@ -32,25 +29,26 @@ export function ProgressRing({
 }) {
   const stroke = 12;
   const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
-  const filled =
-    percent === null ? 0 : (Math.min(100, Math.max(0, percent)) / 100) * circumference;
+  const pct = complete
+    ? 100
+    : percent === null
+      ? 0
+      : Math.min(100, Math.max(0, percent));
 
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        role="img"
-        aria-label={
-          complete
-            ? `${value} ${unit} — goal reached`
-            : percent === null
-              ? `${value} ${unit}`
-              : `${Math.round(percent)} percent of the way from your start weight to your goal`
-        }
-      >
+    <div
+      className="relative shrink-0"
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label={
+        complete
+          ? `${value} ${unit} — goal reached`
+          : percent === null
+            ? `${value} ${unit}`
+            : `${Math.round(percent)} percent of the way from your start weight to your goal`
+      }
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -59,27 +57,17 @@ export function ProgressRing({
           stroke="var(--surface-sunk)"
           strokeWidth={stroke}
         />
-        {percent !== null && !complete && (
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke={`color-mix(in oklab, var(--reward) ${Math.round(
-              Math.min(100, Math.max(0, percent)) * 0.6,
-            )}%, var(--trace))`}
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            strokeDasharray={`${filled} ${circumference}`}
-            // Start at twelve o'clock rather than three.
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            className="ring-sweep"
-            style={{ "--ring-arc": `${filled}px` } as React.CSSProperties}
-          />
-        )}
       </svg>
 
-      {complete && <div aria-hidden className="ring-rainbow absolute inset-0" />}
+      {pct > 0 && (
+        <div
+          aria-hidden
+          // At 100 the angular mask comes off entirely — its seam at twelve
+          // o'clock leaves a hairline gap in what should be a closed circle.
+          className={`ring-rainbow absolute inset-0 ${pct >= 100 ? "ring-rainbow-full" : ""}`}
+          style={{ "--ring-pct": `${pct}%` } as React.CSSProperties}
+        />
+      )}
 
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <p className="tnum text-4xl font-bold leading-none">{value}</p>

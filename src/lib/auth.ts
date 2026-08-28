@@ -36,12 +36,7 @@ export type SessionUser = {
   notifyFriends: boolean;
   reminderHour: number;
   milestonePct: number;
-  phase: string | null;
-  rampEndKcal: number | null;
-  rampStepKcal: number | null;
-  rampIntervalDays: number | null;
-  rampLastStepOn: string | null;
-  phaseAnchorLbs: number | null;
+  trackingOnly: boolean;
   shareWeight: boolean;
   calorieTarget: number | null;
   proteinTargetG: number | null;
@@ -134,12 +129,7 @@ export const currentUser = cache(async function currentUser(): Promise<SessionUs
     notifyFriends: user.notifyFriends,
     reminderHour: user.reminderHour,
     milestonePct: user.milestonePct,
-    phase: user.phase,
-    rampEndKcal: user.rampEndKcal,
-    rampStepKcal: user.rampStepKcal,
-    rampIntervalDays: user.rampIntervalDays,
-    rampLastStepOn: user.rampLastStepOn,
-    phaseAnchorLbs: user.phaseAnchorLbs,
+    trackingOnly: user.trackingOnly,
     shareWeight: user.shareWeight,
     calorieTarget: user.calorieTarget,
     proteinTargetG: user.proteinTargetG,

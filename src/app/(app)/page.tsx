@@ -22,8 +22,9 @@ import {
   weekEnding,
   weighInStreak,
 } from "@/lib/calendar";
-import { milestoneReached } from "@/lib/phase";
-import { MilestoneBanner } from "@/components/milestone-banner";
+import { milestoneReached } from "@/lib/milestones";
+import { MilestoneDialog } from "@/components/milestone-dialog";
+import { TrackingToggle } from "@/components/tracking-toggle";
 import { flaggedMeals, mealNutrition, rollingAverage } from "@/lib/nutrition";
 import { addDays } from "@/lib/dates";
 
@@ -61,19 +62,14 @@ export default async function WeightPage() {
   const { units } = user;
   const today = todayIn(user.timezone);
 
-  // There is no goal weight during reverse dieting: the ramp is the plan, and
-  // a target hanging over the climb would score exactly the regain the phase
-  // expects. `goalWeightLbs` is untouched in the database — it simply is not
-  // read into any of the goal UI until maintenance.
-  const inReverse = user.phase === "reverse";
-  const goalWeightLbs = inReverse ? null : user.goalWeightLbs;
-
-  // Readings within ±1 lb of the weight the cut ended at render neutral while
-  // the ramp runs — expected regain is not scored for or against.
-  const inBand = (weightLbs: number) =>
-    inReverse &&
-    user.phaseAnchorLbs !== null &&
-    Math.abs(weightLbs - user.phaseAnchorLbs) <= 1;
+  // Daily tracking mode: no goal hanging over the numbers, and no up/down
+  // verdicts. `goalWeightLbs` is untouched in the database — it simply is not
+  // read into any of the goal UI (ring, "to go", projection, chart goal line)
+  // while the mode is on. The finished cut's rainbow ring is the exception:
+  // a trophy already earned stays.
+  const tracking = user.trackingOnly;
+  const trophy = user.milestonePct >= 100;
+  const goalWeightLbs = tracking ? null : user.goalWeightLbs;
 
   const latest = entries.at(-1) ?? null;
   const previous = entries.at(-2) ?? null;
@@ -174,10 +170,7 @@ export default async function WeightPage() {
             any one figure it happens to change. */}
         <UnitSwitch units={units} />
       </div>
-      <MilestoneBanner
-        milestone={milestone}
-        canStartReverse={user.phase === null}
-      />
+      <MilestoneDialog milestone={milestone} />
 
       {showBanner && (
         <WaterWeightBanner
@@ -194,23 +187,36 @@ export default async function WeightPage() {
             className="tile mt-5 flex items-center gap-5 p-5"
             aria-label="Current reading"
           >
-            <ProgressRing
-              // The goal morning itself is already the trophy — the stored
-              // acknowledgment only lands after this render.
-              complete={user.milestonePct >= 100 || milestone?.kind === "goal"}
-              percent={progress}
-              value={fromLbs(latest.weightLbs, units).toFixed(1)}
-              unit={units}
-              caption={[
-                latest.date === today
-                  ? "today"
-                  : formatDayShort(latest.date).toLowerCase(),
-                loggedTime(latest, user.timezone),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            />
+            {!tracking || trophy ? (
+              <ProgressRing
+                // The goal morning itself is already the trophy — the stored
+                // acknowledgment only lands after this render.
+                complete={trophy || milestone?.kind === "goal"}
+                percent={progress}
+                value={fromLbs(latest.weightLbs, units).toFixed(1)}
+                unit={units}
+                caption={readingCaption(latest, today, user.timezone)}
+              />
+            ) : (
+              // Daily tracking without a finished cut: the reading, no ring.
+              <div className="shrink-0 text-center">
+                <p className="tnum text-4xl font-bold leading-none">
+                  {fromLbs(latest.weightLbs, units).toFixed(1)}
+                </p>
+                <p className="mt-0.5 text-sm font-bold text-ink-faint">
+                  {units}
+                </p>
+                <p className="mt-1 text-xs text-ink-muted">
+                  {readingCaption(latest, today, user.timezone)}
+                </p>
+              </div>
+            )}
             <div className="min-w-0 flex-1">
+              {tracking && (
+                <p className="text-sm text-ink-muted">
+                  Just tracking, day to day.
+                </p>
+              )}
               {progress !== null && (
                 <>
                   <p className="tnum text-3xl font-bold leading-none">
@@ -233,31 +239,6 @@ export default async function WeightPage() {
                   today={today}
                 />
               )}
-              {inReverse &&
-                user.calorieTarget !== null &&
-                user.rampEndKcal !== null && (
-                  <div className="min-w-0">
-                    <p className="tnum text-sm font-bold">
-                      Reverse dieting ·{" "}
-                      {user.calorieTarget.toLocaleString()} →{" "}
-                      {user.rampEndKcal.toLocaleString()} kcal
-                    </p>
-                    {user.rampLastStepOn !== null &&
-                      user.rampIntervalDays !== null && (
-                        <p className="tnum mt-1 text-sm text-ink-muted">
-                          Next increase ~
-                          {formatMonthDay(
-                            addDays(user.rampLastStepOn, user.rampIntervalDays),
-                          )}
-                        </p>
-                      )}
-                  </div>
-                )}
-              {user.phase === "maintain" && user.calorieTarget !== null && (
-                <p className="tnum mt-3 text-sm text-ink-muted">
-                  Maintaining at {user.calorieTarget.toLocaleString()} kcal
-                </p>
-              )}
             </div>
           </section>
 
@@ -266,13 +247,13 @@ export default async function WeightPage() {
               label="Since last"
               deltaLbs={sinceLast}
               units={units}
-              neutral={inBand(latest.weightLbs)}
+              neutral={tracking}
             />
             <StatTile
               label="Since start"
               deltaLbs={sinceStart}
               units={units}
-              neutral={inBand(latest.weightLbs)}
+              neutral={tracking}
             />
           </dl>
 
@@ -382,7 +363,7 @@ export default async function WeightPage() {
                         <DeltaText
                           deltaLbs={delta}
                           units={units}
-                          neutral={inBand(entry.weightLbs)}
+                          neutral={tracking}
                         />
                       )}
                     </span>
@@ -392,8 +373,24 @@ export default async function WeightPage() {
           </ul>
         </section>
       )}
+
+      <TrackingToggle trackingOnly={tracking} />
     </>
   );
+}
+
+/** The line under the reading: which day it is for, and when it was logged. */
+function readingCaption(
+  entry: { date: string; createdAt: Date },
+  today: string,
+  timezone: string,
+) {
+  return [
+    entry.date === today ? "today" : formatDayShort(entry.date).toLowerCase(),
+    loggedTime(entry, timezone),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /**
@@ -464,9 +461,8 @@ function StatTile({
 }
 
 /** Direction is carried by an arrow and a sign, never by color alone.
- *  `neutral` keeps the arrow but drops the judgment colours — worn while
- *  reverse dieting for readings near the weight the cut ended at, where a
- *  small rise is the plan working, not a setback. */
+ *  `neutral` keeps the arrow but drops the judgment colours — worn in daily
+ *  tracking mode, where a change is a number, not a verdict. */
 function DeltaText({
   deltaLbs,
   units,
