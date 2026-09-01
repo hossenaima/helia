@@ -61,6 +61,10 @@ export type DayReport = {
     activeBurn: number | null;
     macros: Nutrition;
   };
+  /** Numbers-off meal logging: meals appear in words only — no calories,
+   *  macros, targets or bands anywhere in the report. The weight half is
+   *  untouched. */
+  numbersFree: boolean;
 };
 
 const kcal = (n: number) => `${Math.round(n).toLocaleString("en-US")} kcal`;
@@ -98,6 +102,10 @@ export function reportText(r: DayReport): string {
   lines.push("", "DAY TOTALS");
   if (r.totals.mealCount === 0) {
     lines.push("No meals logged this day.");
+  } else if (r.numbersFree) {
+    lines.push(
+      `${r.totals.mealCount} meal${r.totals.mealCount === 1 ? "" : "s"} logged.`,
+    );
   } else {
     const target =
       r.totals.target === null
@@ -115,7 +123,7 @@ export function reportText(r: DayReport): string {
     );
     lines.push(macroLine(r.totals.macros));
   }
-  if (r.totals.activeBurn !== null && r.totals.activeBurn > 0) {
+  if (!r.numbersFree && r.totals.activeBurn !== null && r.totals.activeBurn > 0) {
     lines.push(`Active burn: ${kcal(r.totals.activeBurn)}`);
   }
 
@@ -123,7 +131,16 @@ export function reportText(r: DayReport): string {
 }
 
 /** One meal as text, appended below the totals by the page. */
-export function mealText(m: ReportMeal, index: number): string {
+export function mealText(
+  m: ReportMeal,
+  index: number,
+  numbersFree = false,
+): string {
+  if (numbersFree) {
+    const lines = ["", `${index + 1}. ${m.name}`];
+    if (m.note && m.note !== m.name) lines.push(`   "${m.note}"`);
+    return lines.join("\n");
+  }
   const lines: string[] = [""];
   const band =
     m.precision === "estimated" && m.band
@@ -147,11 +164,13 @@ export function fullReportText(r: DayReport, meals: ReportMeal[]): string {
   const parts = [reportText(r)];
   if (meals.length > 0) {
     parts.push("\n\nMEALS");
-    parts.push(meals.map(mealText).join("\n"));
+    parts.push(meals.map((m, i) => mealText(m, i, r.numbersFree)).join("\n"));
   }
-  parts.push(
-    "\n\nFigures marked \"estimated\" are estimates, not measurements.",
-  );
+  if (!r.numbersFree) {
+    parts.push(
+      "\n\nFigures marked \"estimated\" are estimates, not measurements.",
+    );
+  }
   return parts.join("");
 }
 
@@ -178,6 +197,7 @@ export function __checkReport(): string {
       change: { direction: "down", amount: "0.4 lb", since: "Aug 14" },
     },
     totals: { calories: 1840, mealCount: 2, target: 2000, activeBurn: 320, macros },
+    numbersFree: false,
   };
   const meals: ReportMeal[] = [
     {
@@ -234,5 +254,15 @@ export function __checkReport(): string {
     [],
   );
   if (!empty.includes("No meals logged this day.")) throw new Error("missing empty-meals line");
+
+  // Numbers-free: words only — no kcal, targets, macros, bands or footer.
+  const free = fullReportText({ ...report, numbersFree: true }, meals);
+  if (!free.includes("2 meals logged.")) throw new Error("missing numbers-free count");
+  if (!free.includes('1. Chicken over rice\n   "chicken over rice with white sauce"')) {
+    throw new Error(`numbers-free meal line wrong\n---\n${free}`);
+  }
+  for (const banned of ["kcal", "target", "Protein", "estimated", "basis"]) {
+    if (free.includes(banned)) throw new Error(`numbers-free leaked: ${banned}\n---\n${free}`);
+  }
   return "report: all checks passed";
 }

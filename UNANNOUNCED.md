@@ -25,6 +25,13 @@ node scripts/announce.mjs "…" "…" --send                                # to
 
 ## Waiting to be announced
 
+- **Turn calorie counting off.** At the bottom of the Meals tab: switch to a
+  simple meal log any time. Logging becomes just a name and what you ate, in
+  your words — no estimates, no photo reading, no calories or totals anywhere,
+  and the day report becomes your day in words. Friends you share food with
+  see what you ate, never numbers. Meals you logged before keep their numbers
+  and show them again if you switch back; meals logged while it&rsquo;s on
+  never get numbers at all.
 - **A rainbow that fills as you go.** The progress ring on the Weight tab is
   now a rainbow revealing itself as you close in — a quarter of the circle at
   25%, half at 50% — and at your goal the circle completes and stays, for

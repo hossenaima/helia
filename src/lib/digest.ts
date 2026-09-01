@@ -57,6 +57,9 @@ export type Digest = {
   /** Nothing logged at all — the caller skips these rather than mailing
    *  somebody an empty page about their week. */
   empty: boolean;
+  /** Numbers-off meal logging: attendance ("days with meals logged") stays,
+   *  but no calorie or macro figure appears anywhere in the email. */
+  numbersFree: boolean;
 };
 
 /**
@@ -150,7 +153,10 @@ export async function buildDigest(userId: string): Promise<Digest | null> {
 
   const lines: DayLine[] = days.map((date) => {
     const parts = mealsByDate.get(date);
-    const total = parts ? sumNutrition(parts) : null;
+    // Numbers-off logging: attendance survives, figures do not — a meal
+    // logged before the switch still holds numbers, and they must not leak
+    // into the email while the mode is on.
+    const total = parts && !user.foodLogOnly ? sumNutrition(parts) : null;
     return {
       date,
       lbs: byDate.get(date) ?? null,
@@ -227,5 +233,6 @@ export async function buildDigest(userId: string): Promise<Digest | null> {
     })),
     units: user.units,
     empty: weighed.length === 0 && loggedDays.length === 0,
+    numbersFree: user.foodLogOnly,
   };
 }

@@ -221,11 +221,11 @@ function FriendCard({
         <div className="mt-3 rounded-xl bg-surface-sunk px-3 py-2">
           <p className="tnum flex items-baseline justify-between gap-3 text-xs font-bold">
             <span>Today</span>
-            <span>
-              {friend.caloriesToday === null
-                ? "—"
-                : `${friend.caloriesToday.toLocaleString()} kcal`}
-            </span>
+            {/* Null means the friend logs without numbers — their meals still
+                list below; a dash would read as broken rather than chosen. */}
+            {friend.caloriesToday !== null && (
+              <span>{friend.caloriesToday.toLocaleString()} kcal</span>
+            )}
           </p>
           {friend.mealsToday.length === 0 ? (
             <p className="mt-1 text-xs text-ink-muted">Nothing logged yet.</p>
@@ -237,9 +237,11 @@ function FriendCard({
                   className="flex items-baseline justify-between gap-3 text-xs text-ink-muted"
                 >
                   <span className="min-w-0 truncate">{m.name}</span>
-                  <span className="tnum shrink-0">
-                    {m.calories.toLocaleString()}
-                  </span>
+                  {m.calories !== null && (
+                    <span className="tnum shrink-0">
+                      {m.calories.toLocaleString()}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

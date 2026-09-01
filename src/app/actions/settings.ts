@@ -311,3 +311,30 @@ export async function setTrackingModeAction(
     message: on ? "Daily tracking on." : "Goal mode is back.",
   };
 }
+
+/**
+ * The Meals tab's mode switch: numbers-off (a plain journal — words, no
+ * estimator, no calories) or full tracking. Same rule as the weight mode:
+ * decided where data is read, hides but never erases — switching back shows
+ * old numbers again, and meals logged while off stay numberless.
+ */
+export async function setFoodLogModeAction(
+  _prev: SettingsResult,
+  formData: FormData,
+): Promise<SettingsResult> {
+  const me = await requireUser();
+  const on = formData.get("foodLogOnly") === "1";
+
+  await prisma.user.update({
+    where: { id: me.id },
+    data: { foodLogOnly: on },
+  });
+
+  revalidatePath("/meals");
+  revalidatePath("/report");
+  revalidatePath("/");
+  return {
+    ok: true,
+    message: on ? "Simple meal log on." : "Calorie tracking is back.",
+  };
+}

@@ -42,6 +42,22 @@ small celebrations when a milestone or a calorie target is met.
 - Live: <https://helia-plum.vercel.app>
 - Five tabs: **Weight** (`/`), **Calendar**, **Meals**, **Friends**, **Settings**
 
+**State of play, 2026-09-01.** **Numbers-off meal logging** shipped:
+`User.foodLogOnly`, toggled at the bottom of the Meals tab, turns the tab
+into a plain journal — name and words, no estimator, no photo button, no
+totals, no targets, no active burn. Same "hides, never erases" rule as
+`trackingOnly`, decided at read time: old meals keep stored numbers and show
+them again when the mode is turned off; meals logged while on are stored
+with **zero items** (the existing "Log it with no typed calories" path — no
+action changes were needed), so there is nothing to recalculate in either
+direction, which was the owner's requirement. Numbers are also kept out of
+the day report (words only, via `DayReport.numbersFree`), the digest
+(attendance stays, `Digest.numbersFree` drops the macro chart and averages),
+friend cards (a numbers-off friend shares meal names, `calories` is null in
+`FriendSummary.mealsToday`), and the water-weight banner (physiology-only,
+no kcal quote). Browser-verified end to end on a test account (11 checks),
+deleted after. Deployed to production 2026-09-01, post-deploy smoke below.
+
 **State of play, 2026-08-28.** Phases are **removed again** — before they were
 ever announced (their UNANNOUNCED entry was deleted, not rewritten; testers
 never heard of them). In their place: **daily tracking mode**
@@ -200,8 +216,9 @@ Days are `"YYYY-MM-DD"` strings, never timestamps. Weights are always stored in
   `timezone`, `notifyWeighIn`/`notifyFriends`/`reminderHour`, `lastRemindedOn`,
   `milestonePct` (largest quarter already congratulated; 100 keeps the trophy
   ring), `trackingOnly` (daily tracking mode — no goal UI, no verdicts),
-  `shareWeight`. Orphaned, awaiting DROP: `milestoneLbs` and the six phase
-  columns
+  `foodLogOnly` (numbers-off meal logging — a plain journal, no estimator or
+  figures), `shareWeight`. Orphaned, awaiting DROP: `milestoneLbs` and the
+  six phase columns
 - **WeightEntry** — one per `(userId, date)`; re-submitting corrects it. Carries
   `source` (`live` | `health` | `backfill`), which decides whether the day
   counts toward a streak
@@ -434,6 +451,19 @@ step further, for something irreversible.
 hundreds of calories for an individual, and a wrong target would quietly skew
 the budget and every progress bar. Blank targets hide those features rather than
 guessing.
+
+**Numbers-off logging is a read-time mode, not a data mode.**
+`User.foodLogOnly` (2026-09-01) gates every numbers-bearing surface where
+the data is read — the same pattern, and for the same reason, as
+`trackingOnly` on the Weight tab. Nothing converts, deletes or recalculates:
+a meal logged while the mode is on is simply a `Meal` row with no items,
+which the schema always allowed, and the plain "Log it" save path already
+produced. The one rule to keep: **a surface that shows food figures must
+check `foodLogOnly` where it reads them** — meals page, meal card, report,
+digest, friend summaries and the water-weight banner all do; a new surface
+that forgets is leaking numbers the person switched off. Friends' cards
+respect the *subject's* mode (a numbers-off friend shares names, not
+figures) — consistent with sharing being the subject's decision.
 
 **The "log again" reuse list was removed on 2026-08-28** — the owner's call,
 per "minimal, and proven before extended". See *Tried and rejected* for what

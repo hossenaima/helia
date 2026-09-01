@@ -321,7 +321,7 @@ export function renderDigestHtml(d: Digest): string {
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:26px 0 0">${stats}</table>
 
-    ${macroChart(d) ? `<div style="margin-top:26px">${macroChart(d)}</div>` : ""}
+    ${!d.numbersFree && macroChart(d) ? `<div style="margin-top:26px">${macroChart(d)}</div>` : ""}
 
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 0">
       <tr><td align="center" bgcolor="${INK}" style="border-radius:999px">

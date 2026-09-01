@@ -46,10 +46,15 @@ async function downscale(file: File): Promise<Blob> {
 export function MealForm({
   date,
   aiEnabled,
+  simple = false,
 }: {
   date: string;
   /** False when no GEMINI_API_KEY is configured. */
   aiEnabled: boolean;
+  /** Numbers-off mode: name and words only — no photo, no calories, no
+   *  estimator. The plain "Log it" path already stores a meal with no items,
+   *  so nothing number-shaped is ever computed for it. */
+  simple?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(saveMealAction, INITIAL);
   const [name, setName] = useState(() => suggestMealName(new Date().getHours()));
@@ -144,7 +149,7 @@ export function MealForm({
         onChange={(e) => choosePhoto(e.target.files?.[0])}
       />
 
-      {photo ? (
+      {simple ? null : photo ? (
         <div className="mt-3 flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- a blob URL
               from this device; next/image is for optimising remote assets. */}
@@ -199,6 +204,7 @@ export function MealForm({
         </p>
       )}
 
+      {!simple && (
       <div className="mt-4 flex flex-wrap items-end gap-x-5 gap-y-3">
         <div>
           <label htmlFor="calories" className="eyebrow block">
@@ -235,8 +241,9 @@ export function MealForm({
           {showMacros ? "− Macros" : "+ Macros"}
         </button>
       </div>
+      )}
 
-      {showMacros && (
+      {!simple && showMacros && (
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3">
           <GramField id="protein" label="Protein" tint="var(--protein)" />
           <GramField id="carbs" label="Carbs" tint="var(--carbs)" />
@@ -253,11 +260,12 @@ export function MealForm({
           value="0"
           onClick={() => setPendingAi(false)}
           disabled={pending || note.trim() === "" || name.trim() === ""}
-          className="btn btn-soft flex-1"
+          className={simple ? "btn btn-primary flex-1" : "btn btn-soft flex-1"}
         >
-          Log it
+          {pending && !pendingAi && simple ? "Logging" : "Log it"}
         </button>
 
+        {!simple && (
         <button
           type="submit"
           name="estimate"
@@ -286,15 +294,16 @@ export function MealForm({
               ? "Read the photo"
               : "Estimate for me"}
         </button>
+        )}
       </div>
 
-      {aiEnabled && (
+      {!simple && aiEnabled && (
         <p className="mt-3 text-xs text-ink-faint">
           Estimated, not measured — adjust anything that looks off.
         </p>
       )}
 
-      {!aiEnabled && (
+      {!simple && !aiEnabled && (
         <p className="mt-3 text-xs text-ink-muted">
           Estimation is off. Add a Gemini API key to your environment to turn it
           on.

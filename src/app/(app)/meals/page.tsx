@@ -10,6 +10,7 @@ import { MealForm } from "@/components/meal-form";
 import { DayTotals } from "@/components/day-totals";
 import { ActiveBurnField } from "@/components/active-burn-field";
 import { MealCard } from "@/components/meal-card";
+import { FoodLogToggle } from "@/components/tracking-toggle";
 
 export default async function MealsPage(props: PageProps<"/meals">) {
   const user = await currentUser();
@@ -70,16 +71,20 @@ export default async function MealsPage(props: PageProps<"/meals">) {
         )}
       </nav>
 
-      <DayTotals
-        eaten={eaten}
-        activeBurn={dayLog?.activeBurnKcal ?? null}
-        calorieTarget={user.calorieTarget}
-        proteinTargetG={user.proteinTargetG}
-        fiberTargetG={user.fiberTargetG}
-        mealCount={meals.length}
-        weeklyAverage={weeklyAverage}
-        isToday={date === today}
-      />
+      {/* Numbers-off mode: no totals, no burn field, no estimator — the tab
+          is a journal. Data is only hidden, never touched; see the toggle. */}
+      {!user.foodLogOnly && (
+        <DayTotals
+          eaten={eaten}
+          activeBurn={dayLog?.activeBurnKcal ?? null}
+          calorieTarget={user.calorieTarget}
+          proteinTargetG={user.proteinTargetG}
+          fiberTargetG={user.fiberTargetG}
+          mealCount={meals.length}
+          weeklyAverage={weeklyAverage}
+          isToday={date === today}
+        />
+      )}
 
       {/* The day as one shareable page. A proper button, not a corner link —
           shipped as eyebrow text beside "Log" it went unnoticed. */}
@@ -88,9 +93,15 @@ export default async function MealsPage(props: PageProps<"/meals">) {
         <span aria-hidden>→</span>
       </Link>
 
-      <ActiveBurnField date={date} value={dayLog?.activeBurnKcal ?? null} />
+      {!user.foodLogOnly && (
+        <ActiveBurnField date={date} value={dayLog?.activeBurnKcal ?? null} />
+      )}
 
-      <MealForm date={date} aiEnabled={getEstimator().available} />
+      <MealForm
+        date={date}
+        aiEnabled={getEstimator().available}
+        simple={user.foodLogOnly}
+      />
 
       {meals.length > 0 && (
         <section className="mt-9" aria-label="Meals logged">
@@ -102,7 +113,12 @@ export default async function MealsPage(props: PageProps<"/meals">) {
               // remounts the card and reseeds its draft state — meal.id alone
               // never changes, so useState's initializers only ran once and a
               // reopened Edit kept showing the pre-save items and total.
-              <MealCard key={`${meal.id}:${meal.items.length}`} meal={meal} index={i} />
+              <MealCard
+                key={`${meal.id}:${meal.items.length}`}
+                meal={meal}
+                index={i}
+                hideNumbers={user.foodLogOnly}
+              />
             ))}
           </ul>
         </section>
@@ -114,6 +130,7 @@ export default async function MealsPage(props: PageProps<"/meals">) {
         </p>
       )}
 
+      <FoodLogToggle foodLogOnly={user.foodLogOnly} />
     </>
   );
 }

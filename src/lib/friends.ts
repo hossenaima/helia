@@ -22,8 +22,10 @@ export type FriendSummary = {
   week: Array<{ date: string; lbs: number | null }>;
   /** Today's intake in kcal, when they share their food. */
   caloriesToday: number | null;
-  /** Today's meals with what each one cost, when they share their food. */
-  mealsToday: Array<{ name: string; calories: number }>;
+  /** Today's meals with what each one cost, when they share their food.
+   *  `calories` is null for a friend in numbers-off logging — they share
+   *  what they ate, never figures. */
+  mealsToday: Array<{ name: string; calories: number | null }>;
   streak: number;
   loggedToday: boolean;
   /** What they have chosen to show *you*. Sent so the card can say "not
@@ -59,6 +61,10 @@ const FRIEND_FIELDS = {
   avatar: true,
   timezone: true,
   shareWeight: true,
+  // Numbers-off logging is the subject's mode: a friend in it shares what
+  // they ate, never figures — there may be stored numbers on old meals, and
+  // showing a friend what the subject has chosen not to see would be worse.
+  foodLogOnly: true,
 } as const;
 
 export async function friendSummaries(userId: string): Promise<FriendSummary[]> {
@@ -181,15 +187,18 @@ export async function friendSummaries(userId: string): Promise<FriendSummary[]> 
             lbs: mine.find((m) => m.date === date)?.weightLbs ?? null,
           }))
         : [],
-      caloriesToday: other.sharesMealsWithMe
-        ? Math.round(
-            theirMeals.reduce((sum, m) => sum + mealNutrition(m).calories, 0),
-          )
-        : null,
+      caloriesToday:
+        other.sharesMealsWithMe && !other.foodLogOnly
+          ? Math.round(
+              theirMeals.reduce((sum, m) => sum + mealNutrition(m).calories, 0),
+            )
+          : null,
       mealsToday: other.sharesMealsWithMe
         ? theirMeals.map((m) => ({
             name: m.name,
-            calories: Math.round(mealNutrition(m).calories),
+            calories: other.foodLogOnly
+              ? null
+              : Math.round(mealNutrition(m).calories),
           }))
         : [],
       streak: streak.current,

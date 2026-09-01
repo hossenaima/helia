@@ -43,9 +43,14 @@ export type MealCardMeal = {
 export function MealCard({
   meal,
   index = 0,
+  hideNumbers = false,
 }: {
   meal: MealCardMeal;
   index?: number;
+  /** Numbers-off mode: the card is journal entry — name, words, time of
+   *  logging, delete, and editing of the words. Stored numbers (on meals
+   *  logged before the switch) stay in the database and out of sight. */
+  hideNumbers?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -128,6 +133,95 @@ export function MealCard({
       setRemoved([]);
       setAdditions([]);
     });
+  }
+
+  if (hideNumbers) {
+    return (
+      <li
+        className="settle card p-4"
+        style={{ animationDelay: `${Math.min(index, 6) * 45}ms` }}
+      >
+        {!editing ? (
+          <>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 flex-1 truncate font-bold">
+                {meal.name}
+              </span>
+              <div className="flex shrink-0 items-baseline gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="eyebrow transition-colors hover:!text-ink"
+                >
+                  Edit
+                </button>
+                <form action={deleteMealAction}>
+                  <input type="hidden" name="id" value={meal.id} />
+                  <button
+                    type="submit"
+                    aria-label={`Delete ${meal.name}`}
+                    className="text-lg leading-none text-ink-faint transition-colors hover:text-up"
+                  >
+                    ×
+                  </button>
+                </form>
+              </div>
+            </div>
+            {meal.note && meal.note !== meal.name && (
+              <p className="mt-1.5 text-sm text-ink-muted">{meal.note}</p>
+            )}
+          </>
+        ) : (
+          <>
+            <input
+              type="text"
+              aria-label="Meal name"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              className="w-full rounded-lg bg-surface-sunk px-3 py-2 text-sm font-bold focus:outline-2 focus:outline-trace"
+            />
+            <textarea
+              aria-label="Meal description"
+              rows={2}
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              placeholder="description"
+              className="mt-1.5 w-full resize-none rounded-lg bg-surface-sunk px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-2 focus:outline-trace"
+            />
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setNameDraft(meal.name);
+                  setNoteDraft(meal.note);
+                }}
+                className="flex-1 rounded-full bg-surface-sunk px-4 py-2 text-sm font-bold transition-opacity hover:opacity-80"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  startSaving(async () => {
+                    await renameMealAction({
+                      mealId: meal.id,
+                      name: nameDraft,
+                      note: noteDraft,
+                    });
+                    setEditing(false);
+                  })
+                }
+                disabled={saving}
+                className="flex-1 rounded-full bg-ink px-4 py-2 text-sm font-bold text-ground transition-opacity hover:opacity-90 disabled:opacity-40"
+              >
+                {saving ? "Saving" : "Save"}
+              </button>
+            </div>
+          </>
+        )}
+      </li>
+    );
   }
 
   return (

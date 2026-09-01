@@ -125,6 +125,14 @@ model User {
   /// erases it.
   trackingOnly Boolean @default(false)
 
+  /// Numbers-off meal logging: the Meals tab is a plain journal — name and
+  /// words, no estimator call, no calories computed or shown. Same rule as
+  /// `trackingOnly`: decided where data is read, hides but never erases —
+  /// meals logged before the switch keep their stored numbers and show them
+  /// again if it is switched back. Meals logged while on simply have no
+  /// items, so there is nothing to recalculate in either direction.
+  foodLogOnly Boolean @default(false)
+
   /// Orphaned 2026-08-28 when reverse dieting and maintenance were removed
   /// (daily tracking mode replaced them); nothing reads any of these. Awaiting
   /// their post-deploy DROP — same two-release rule as every column drop here.

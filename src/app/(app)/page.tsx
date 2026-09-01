@@ -178,7 +178,14 @@ export default async function WeightPage() {
           units={units}
           tags={priorTags}
           onDate={culpritDate}
-          loggedKcal={priorDayKcal > 0 ? Math.round(priorDayKcal) : null}
+          // Numbers-off meal logging: the reassurance stands on the
+          // physiology alone rather than quoting a calorie figure the
+          // person has chosen not to see.
+          loggedKcal={
+            !user.foodLogOnly && priorDayKcal > 0
+              ? Math.round(priorDayKcal)
+              : null
+          }
         />
       )}
       {latest ? (

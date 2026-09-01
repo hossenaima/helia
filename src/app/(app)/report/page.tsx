@@ -96,6 +96,7 @@ export default async function ReportPage(props: PageProps<"/report">) {
       activeBurn: dayLog?.activeBurnKcal ?? null,
       macros: eaten,
     },
+    numbersFree: user.foodLogOnly,
   };
 
   const reportMeals: ReportMeal[] = meals.map((meal) => {
@@ -191,9 +192,17 @@ export default async function ReportPage(props: PageProps<"/report">) {
         )}
       </section>
 
+      {/* Hidden entirely in numbers-free mode: the totals ARE the numbers,
+          and the meal list below already carries the day. The share text
+          still states the meal count. */}
+      {!report.numbersFree && (
       <section className="card mt-3 p-4" aria-label="Day totals">
         <h2 className="eyebrow">Day totals</h2>
-        {meals.length > 0 ? (
+        {meals.length === 0 ? (
+          <p className="mt-1 text-sm text-ink-muted">
+            No meals logged this day.
+          </p>
+        ) : (
           <>
             <p className="tnum mt-1 text-xl font-bold">
               {Math.round(eaten.calories).toLocaleString()} kcal
@@ -218,10 +227,6 @@ export default async function ReportPage(props: PageProps<"/report">) {
               {Math.round(eaten.sodiumMg)} mg
             </p>
           </>
-        ) : (
-          <p className="mt-1 text-sm text-ink-muted">
-            No meals logged this day.
-          </p>
         )}
         {report.totals.activeBurn !== null && report.totals.activeBurn > 0 && (
           <p className="tnum mt-1 text-xs text-ink-muted">
@@ -229,6 +234,7 @@ export default async function ReportPage(props: PageProps<"/report">) {
           </p>
         )}
       </section>
+      )}
 
       {reportMeals.length > 0 && (
         <section className="mt-6" aria-label="Meals">
@@ -240,13 +246,16 @@ export default async function ReportPage(props: PageProps<"/report">) {
                   <span className="min-w-0 flex-1 truncate font-bold">
                     {meal.name}
                   </span>
-                  <span className="tnum shrink-0 text-sm font-semibold">
-                    {Math.round(meal.calories).toLocaleString()} kcal
-                  </span>
+                  {!report.numbersFree && (
+                    <span className="tnum shrink-0 text-sm font-semibold">
+                      {Math.round(meal.calories).toLocaleString()} kcal
+                    </span>
+                  )}
                 </div>
                 {meal.note && meal.note !== meal.name && (
                   <p className="mt-1 text-sm text-ink-muted">{meal.note}</p>
                 )}
+                {!report.numbersFree && (
                 <p className="tnum mt-1 text-xs text-ink-faint">
                   {meal.precision === "exact"
                     ? "Exact"
@@ -259,7 +268,8 @@ export default async function ReportPage(props: PageProps<"/report">) {
                     </>
                   )}
                 </p>
-                {meal.items.length > 0 && (
+                )}
+                {!report.numbersFree && meal.items.length > 0 && (
                   <ul className="mt-3 space-y-2 border-t border-rule pt-3">
                     {meal.items.map((item, j) => (
                       <li key={j} className="text-sm">
@@ -295,9 +305,11 @@ export default async function ReportPage(props: PageProps<"/report">) {
         </section>
       )}
 
-      <p className="mt-6 text-xs text-ink-faint">
-        Figures marked &ldquo;estimated&rdquo; are estimates, not measurements.
-      </p>
+      {!report.numbersFree && (
+        <p className="mt-6 text-xs text-ink-faint">
+          Figures marked &ldquo;estimated&rdquo; are estimates, not measurements.
+        </p>
+      )}
     </>
   );
 }
