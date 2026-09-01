@@ -56,7 +56,10 @@ the day report (words only, via `DayReport.numbersFree`), the digest
 friend cards (a numbers-off friend shares meal names, `calories` is null in
 `FriendSummary.mealsToday`), and the water-weight banner (physiology-only,
 no kcal quote). Browser-verified end to end on a test account (11 checks),
-deleted after. Deployed to production 2026-09-01, post-deploy smoke below.
+deleted after. **Deployed to production 2026-09-01**; the same 11-check
+suite was then run against the live site and passed, test account deleted.
+(The transient "Not authorized" on the first `vercel deploy --prod` recurred
+— second time now — and the immediate retry succeeded again.)
 
 **State of play, 2026-08-28.** Phases are **removed again** — before they were
 ever announced (their UNANNOUNCED entry was deleted, not rewritten; testers
